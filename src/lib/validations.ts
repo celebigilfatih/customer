@@ -85,8 +85,27 @@ export const customerFiltersSchema = z.object({
   limit: z.coerce.number().min(1).max(100).default(10)
 })
 
+// User validation schemas
+export const userCreateSchema = z.object({
+  username: z.string().min(3, 'Kullanıcı adı en az 3 karakter olmalıdır').max(50, 'Kullanıcı adı en fazla 50 karakter olmalıdır'),
+  password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
+  fullName: z.string().min(2, 'Ad soyad en az 2 karakter olmalıdır').max(100, 'Ad soyad en fazla 100 karakter olmalıdır').optional(),
+  email: z.string().email('Geçerli bir e-posta adresi girin').optional(),
+  isActive: z.boolean().optional().default(true),
+})
+
+export const userUpdateSchema = userCreateSchema.partial()
+
+export const loginSchema = z.object({
+  username: z.string().min(1, 'Kullanıcı adı boş bırakılamaz'),
+  password: z.string().min(1, 'Şifre boş bırakılamaz'),
+})
+
 export type CustomerCreate = z.infer<typeof customerCreateSchema>
 export type CustomerUpdate = z.infer<typeof customerUpdateSchema>
 export type NoteCreate = z.infer<typeof noteCreateSchema>
 export type NoteUpdate = z.infer<typeof noteUpdateSchema>
 export type CustomerFilters = z.infer<typeof customerFiltersSchema>
+export type UserCreate = z.infer<typeof userCreateSchema>
+export type UserUpdate = z.infer<typeof userUpdateSchema>
+export type Login = z.infer<typeof loginSchema>

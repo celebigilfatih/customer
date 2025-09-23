@@ -122,13 +122,6 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                 className="pl-10 bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
               />
             </div>
-            <Button 
-              onClick={onAddCustomer} 
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Müşteri
-            </Button>
           </div>
 
           {loading ? (
@@ -155,7 +148,9 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                       <TableHead className="font-semibold text-gray-700">İl</TableHead>
                       <TableHead className="font-semibold text-gray-700">İlçe</TableHead>
                       <TableHead className="font-semibold text-gray-700">Teklif</TableHead>
-                      <TableHead className="font-semibold text-gray-700">Başlangıç Tarihi</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Durum Bilgisi</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Süre</TableHead>
+                      <TableHead className="font-semibold text-gray-700">Sözleşme Bilgileri</TableHead>
                       <TableHead className="font-semibold text-gray-700 text-right">İşlemler</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -169,7 +164,36 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                         <TableCell className={`font-semibold text-green-600`}>
                           {customer.offer ? `${customer.offer} TL` : 'Belirtilmemiş'}
                         </TableCell>
-                        <TableCell className="text-gray-600">{customer.startDate}</TableCell>
+                        <TableCell className="text-gray-700">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            customer.status === 'POTENTIAL' ? 'bg-blue-100 text-blue-800' :
+                            customer.status === 'CONTACTED' ? 'bg-yellow-100 text-yellow-800' :
+                            customer.status === 'INTERESTED' ? 'bg-purple-100 text-purple-800' :
+                            customer.status === 'CONVERTED' ? 'bg-green-100 text-green-800' :
+                            customer.status === 'SOLD' ? 'bg-emerald-100 text-emerald-800' :
+                            customer.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {customer.status === 'POTENTIAL' ? 'Potansiyel' :
+                             customer.status === 'CONTACTED' ? 'İletişim Kuruldu' :
+                             customer.status === 'INTERESTED' ? 'İlgi Gösterdi' :
+                             customer.status === 'CONVERTED' ? 'Dönüştü' :
+                             customer.status === 'SOLD' ? 'Satıldı' :
+                             customer.status === 'REJECTED' ? 'Reddedildi' :
+                             customer.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-gray-700">{customer.duration || 'Belirtilmemiş'}</TableCell>
+                        <TableCell className="text-gray-600">
+                          {customer.startDate ? (
+                            <div className="text-sm">
+                              <div>Başlangıç: {customer.startDate}</div>
+                              {customer.endDate && <div>Bitiş: {customer.endDate}</div>}
+                            </div>
+                          ) : (
+                            'Belirtilmemiş'
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button

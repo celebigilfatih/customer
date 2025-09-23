@@ -6,7 +6,7 @@ import { CustomerList } from "@/components/customer-list"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerListItem } from "@/lib/types"
-import { Plus } from "lucide-react"
+import { Plus, LogOut, Users } from "lucide-react"
 
 export default function HomePage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -28,6 +28,12 @@ export default function HomePage() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  const handleLogout = () => {
+    // Clear authentication cookie
+    document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    router.push('/login')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto py-8 px-4">
@@ -39,23 +45,30 @@ export default function HomePage() {
                 Müşterilerinizi yönetin ve bilgilerini etkili bir şekilde takip edin
               </p>
             </div>
-            <Button onClick={handleAddCustomer} size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-5 h-5 mr-2" />
-              Müşteri Ekle
-            </Button>
+            <div className="flex gap-3">
+              <Button onClick={() => router.push('/users')} size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+                <Users className="w-5 h-5 mr-2" />
+                Kullanıcılar
+              </Button>
+              <Button onClick={handleAddCustomer} size="lg" className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="w-5 h-5 mr-2" />
+                Müşteri Ekle
+              </Button>
+              <Button onClick={handleLogout} size="lg" variant="outline" className="border-red-600 text-red-600 hover:bg-red-50">
+                <LogOut className="w-5 h-5 mr-2" />
+                Çıkış Yap
+              </Button>
+            </div>
           </div>
         </div>
 
-        <Card className="border border-gray-200 bg-white">
-          <CardContent className="p-6">
+     
             <CustomerList
               onAddCustomer={handleAddCustomer}
               onEditCustomer={handleEditCustomer}
               onViewCustomer={handleViewCustomer}
               refreshTrigger={refreshTrigger}
             />
-          </CardContent>
-        </Card>
       </div>
     </div>
   )

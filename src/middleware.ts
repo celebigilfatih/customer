@@ -3,6 +3,21 @@ import type { NextRequest } from 'next/server'
 import { apiRateLimit } from '@/lib/rate-limiter'
 
 export function middleware(request: NextRequest) {
+  // Check authentication for protected routes
+  const authToken = request.cookies.get('auth-token')?.value
+  const isAuthenticated = authToken && authToken !== 'authenticated' // Check if it's a user ID, not the old hardcoded value
+  const isLoginPage = request.nextUrl.pathname === '/login'
+  
+  // If trying to access login page while authenticated, redirect to home
+  if (isLoginPage && isAuthenticated) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+  
+  // If trying to access protected routes without authentication, redirect to login
+  if (!isLoginPage && !isAuthenticated && !request.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
   // Apply rate limiting to API routes
   if (request.nextUrl.pathname.startsWith('/api/')) {
     const rateLimitResult = apiRateLimit(request)
