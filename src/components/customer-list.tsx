@@ -122,7 +122,13 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                 className="pl-10 bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
               />
             </div>
-
+            <Button 
+              onClick={onAddCustomer} 
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Yeni Müşteri
+            </Button>
           </div>
 
           {loading ? (

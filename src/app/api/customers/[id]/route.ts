@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { CustomerStatus } from '@/generated/prisma'
 import { customerUpdateSchema } from '@/lib/validations'
 import { handleApiError, validateId, sanitizeInput } from '@/lib/error-handler'
 
@@ -62,9 +63,15 @@ export async function PUT(
 
     const validatedData = customerUpdateSchema.parse(sanitizedBody)
 
+    // Convert status to Prisma enum if present
+    const updateData = {
+      ...validatedData,
+      status: validatedData.status as CustomerStatus // Cast to proper enum type
+    }
+
     const customer = await prisma.customer.update({
       where: { id: resolvedParams.id },
-      data: validatedData,
+      data: updateData,
       include: {
         notes: {
           orderBy: { createdAt: 'desc' }

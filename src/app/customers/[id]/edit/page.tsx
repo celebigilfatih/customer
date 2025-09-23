@@ -6,7 +6,7 @@ import { CustomerForm } from "@/components/customer-form"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
-import { Customer } from "@prisma/client"
+import { Customer } from "@/generated/prisma"
 
 export default function EditCustomerPage() {
   const router = useRouter()

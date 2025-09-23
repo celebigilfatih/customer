@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { customerCreateSchema, CustomerCreate } from "@/lib/validations"
-import { Customer } from "@prisma/client"
+import { Customer } from "@/generated/prisma"
 import { toast } from "sonner"
 import { getCities } from "@/lib/cities"
 
@@ -41,6 +41,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
       offer: customer.offer,
       address: customer.address,
       status: customer.status,
+      price: customer.price || "",
     } : {
       fullName: "",
       phoneNumber: "",
@@ -55,6 +56,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
       offer: "",
       address: "",
       status: "POTENTIAL",
+      price: "",
     },
   })
 
@@ -104,10 +106,10 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
   }
 
   return (
-    <Card className="w-full max-w-2xl mx-auto border border-gray-200 bg-white">
-      <CardHeader className="bg-gray-50 border-b border-gray-200">
-        <CardTitle className="text-xl font-semibold text-gray-800">
-          {customer ? 'Müşteri Bilgilerini Düzenle' : 'Yeni Müşteri Oluştur'}
+    <Card className="w-full max-w-2xl mx-auto card-shadow-lg border-0 bg-white/95 backdrop-blur-sm">
+      <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+        <CardTitle className="text-2xl font-semibold text-gray-800">
+          {customer ? "Müşteri Düzenle" : "Yeni Müşteri Ekle"}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-6">
@@ -123,7 +125,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         placeholder="Ad ve soyadı girin" 
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -141,7 +143,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         placeholder="Telefon numarasını girin" 
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -158,9 +160,9 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormLabel className="text-gray-700 font-medium">İl</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                        <SelectValue placeholder="İl seçin" />
-                      </SelectTrigger>
+                        <SelectTrigger className="border-gray-200 focus:border-blue-400 focus:ring-blue-400">
+                          <SelectValue placeholder="İl seçin" />
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent className="max-h-60 bg-white">
                         {cities.map((city) => (
@@ -184,7 +186,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         placeholder="İlçe girin" 
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -202,7 +204,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         placeholder="Kulüp adını girin" 
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -220,7 +222,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         placeholder="Yetkili adını girin" 
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -238,7 +240,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         placeholder="Hosting bilgisi girin" 
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -255,9 +257,9 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormLabel className="text-gray-700 font-medium">Süre</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                        <SelectValue placeholder="Süre seçin" />
-                      </SelectTrigger>
+                        <SelectTrigger className="border-gray-200 focus:border-blue-400 focus:ring-blue-400">
+                          <SelectValue placeholder="Süre seçin" />
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent className="bg-white">
                         <SelectItem value="1">1 Yıl</SelectItem>
@@ -281,7 +283,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         type="date"
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -299,7 +301,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                     <FormControl>
                       <Input 
                         type="date"
-                        className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                         {...field} 
                       />
                     </FormControl>
@@ -318,7 +320,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                   <FormControl>
                     <Textarea 
                       placeholder="Teklif detaylarını girin" 
-                      className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="min-h-[100px] border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                       {...field} 
                     />
                   </FormControl>
@@ -336,7 +338,7 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
                   <FormControl>
                     <Textarea 
                       placeholder="Tam adresi girin" 
-                      className="min-h-[80px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="min-h-[80px] border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                       {...field} 
                     />
                   </FormControl>
@@ -345,30 +347,52 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-gray-700 font-medium">Durum</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Fiyat (TL)</FormLabel>
                     <FormControl>
-                      <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
-                        <SelectValue placeholder="Durum seçin" />
-                      </SelectTrigger>
+                      <Input 
+                        type="number"
+                        placeholder="Fiyatı girin" 
+                        className="border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                        {...field} 
+                      />
                     </FormControl>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="POTENTIAL">Potansiyel</SelectItem>
-                      <SelectItem value="CONTACTED">İletişime Geçildi</SelectItem>
-                      <SelectItem value="INTERESTED">İlgili</SelectItem>
-                      <SelectItem value="CONVERTED">Dönüştürüldü</SelectItem>
-                      <SelectItem value="REJECTED">Reddedildi</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-gray-700 font-medium">Durum</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="border-gray-200 focus:border-blue-400 focus:ring-blue-400">
+                          <SelectValue placeholder="Durum seçin" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="POTENTIAL">Potansiyel</SelectItem>
+                        <SelectItem value="CONTACTED">İletişime Geçildi</SelectItem>
+                        <SelectItem value="INTERESTED">İlgili</SelectItem>
+                        <SelectItem value="CONVERTED">Dönüştürüldü</SelectItem>
+                        <SelectItem value="REJECTED">Reddedildi</SelectItem>
+                        <SelectItem value="SOLD">Satıldı</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="flex gap-4 pt-6 border-t border-gray-100">
               <Button 

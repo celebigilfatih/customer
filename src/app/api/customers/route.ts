@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { CustomerStatus } from '@/generated/prisma'
 import { customerCreateSchema } from '@/lib/validations'
 import { handleApiError, sanitizeInput } from '@/lib/error-handler'
 
@@ -81,8 +82,14 @@ export async function POST(request: NextRequest) {
 
     const validatedData = customerCreateSchema.parse(sanitizedBody)
 
+    // Convert status to Prisma enum if present
+    const createData = {
+      ...validatedData,
+      status: validatedData.status as CustomerStatus // Cast to proper enum type
+    }
+
     const customer = await prisma.customer.create({
-      data: validatedData,
+      data: createData,
       include: {
         notes: true,
         _count: {

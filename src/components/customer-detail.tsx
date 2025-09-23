@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerWithNotes } from "@/lib/types"
 import { CustomerNotes } from "@/components/customer-notes"
-import { Edit } from "lucide-react"
+import { Edit, Phone, MapPin, Building } from "lucide-react"
 import { toast } from "sonner"
 
 interface CustomerDetailProps {
@@ -66,6 +66,7 @@ export function CustomerDetail({ customerId, onEdit, onBack }: CustomerDetailPro
       case 'INTERESTED': return 'bg-green-100 text-green-800'
       case 'CONVERTED': return 'bg-purple-100 text-purple-800'
       case 'REJECTED': return 'bg-red-100 text-red-800'
+      case 'SOLD': return 'bg-emerald-100 text-emerald-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -77,6 +78,7 @@ export function CustomerDetail({ customerId, onEdit, onBack }: CustomerDetailPro
       case 'INTERESTED': return 'İlgili'
       case 'CONVERTED': return 'Dönüştürüldü'
       case 'REJECTED': return 'Reddedildi'
+      case 'SOLD': return 'Satıldı'
       default: return status
     }
   }
@@ -116,18 +118,28 @@ export function CustomerDetail({ customerId, onEdit, onBack }: CustomerDetailPro
               <div>
                 <h3 className="font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">İletişim Bilgileri</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between">
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-blue-600" />
                     <span className="text-gray-600">Telefon:</span>
-                    <span className="font-medium text-gray-900">{customer.phoneNumber}</span>
+                    <span className="font-medium text-gray-900 ml-auto">{customer.phoneNumber}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-4 h-4 text-blue-600" />
                     <span className="text-gray-600">Şehir:</span>
-                    <span className="font-medium text-gray-900">{customer.city}</span>
+                    <span className="font-medium text-gray-900 ml-auto">{customer.city}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex items-center gap-3">
+                    <Building className="w-4 h-4 text-blue-600" />
                     <span className="text-gray-600">İlçe:</span>
-                    <span className="font-medium text-gray-900">{customer.district}</span>
+                    <span className="font-medium text-gray-900 ml-auto">{customer.district}</span>
                   </div>
+                  {customer.price && (
+                    <div className="flex items-center gap-3">
+                      <span className="w-4 h-4 text-green-600">₺</span>
+                      <span className="text-gray-600">Fiyat:</span>
+                      <span className="font-medium text-gray-900 ml-auto">{Number(customer.price).toLocaleString('tr-TR')} ₺</span>
+                    </div>
+                  )}
                 </div>
               </div>
               

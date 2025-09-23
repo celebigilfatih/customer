@@ -1,4 +1,4 @@
-import { Customer, Note } from '@prisma/client'
+import { Customer, Note } from '@/generated/prisma'
 
 export type CustomerWithNotes = Customer & {
   notes: Note[]

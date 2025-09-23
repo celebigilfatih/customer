@@ -51,8 +51,13 @@ export const customerCreateSchema = z.object({
     .min(10, "Adres en az 10 karakter olmalıdır")
     .max(500, "Adres 500 karakterden az olmalıdır"),
   
-  status: z.enum(['POTENTIAL', 'CONTACTED', 'INTERESTED', 'CONVERTED', 'REJECTED'])
-    .default('POTENTIAL')
+  status: z.enum(['POTENTIAL', 'CONTACTED', 'INTERESTED', 'CONVERTED', 'REJECTED', 'SOLD'])
+    .default('POTENTIAL'),
+  
+  price: z.string()
+    .min(1, "Fiyat gereklidir")
+    .regex(/^[0-9]+$/, "Fiyat sadece sayı olmalıdır")
+    .max(10, "Fiyat çok büyük olamaz")
 })
 
 export const customerUpdateSchema = customerCreateSchema.partial()
@@ -75,7 +80,7 @@ export const customerFiltersSchema = z.object({
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
   club: z.string().max(100).optional(),
-  status: z.enum(['POTENTIAL', 'CONTACTED', 'INTERESTED', 'CONVERTED', 'REJECTED']).optional(),
+  status: z.enum(['POTENTIAL', 'CONTACTED', 'INTERESTED', 'CONVERTED', 'REJECTED', 'SOLD']).optional(),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(10)
 })

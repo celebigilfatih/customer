@@ -46,14 +46,16 @@ export default function HomePage() {
           </div>
         </div>
 
-
+        <Card className="border border-gray-200 bg-white">
+          <CardContent className="p-6">
             <CustomerList
               onAddCustomer={handleAddCustomer}
               onEditCustomer={handleEditCustomer}
               onViewCustomer={handleViewCustomer}
               refreshTrigger={refreshTrigger}
             />
-  
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
