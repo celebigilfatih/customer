@@ -1,0 +1,54 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id                   String   @id @default(cuid())
+  fullName             String
+  phoneNumber          String
+  city                 String
+  district             String
+  club                 String
+  sportsSchoolOfficial String
+  hosting              String
+  duration             String
+  startDate            String
+  endDate              String
+  offer                String
+  address              String
+  status               CustomerStatus @default(POTENTIAL)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  notes Note[]
+  
+  @@map("customers")
+}
+
+model Note {
+  id         String   @id @default(cuid())
+  content    String
+  customerId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  @@map("notes")
+}
+
+enum CustomerStatus {
+  POTENTIAL
+  CONTACTED
+  INTERESTED
+  CONVERTED
+  REJECTED
+}
