@@ -119,15 +119,15 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
   }
 
   return (
-    <Card className="bg-gradient-to-br from-white to-blue-50/30 border-0 shadow-xl backdrop-blur-sm">
-      <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
+    <Card className="border border-gray-200 bg-white">
+      <CardHeader className="bg-blue-600 text-white">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-bold flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             📝 Müşteri Notları
           </CardTitle>
           <Button
             onClick={() => setIsAddingNote(true)}
-            className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            className="bg-blue-700 hover:bg-blue-800 text-white"
             size="sm"
           >
             <Plus className="w-4 h-4 mr-1" />
@@ -139,7 +139,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
       <CardContent className="p-6 space-y-4">
         {/* Add New Note Form */}
         {isAddingNote && (
-          <Card className="border-2 border-blue-200 bg-blue-50/50">
+          <Card className="border border-gray-200 bg-gray-50">
             <CardContent className="p-4">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleAddNote)} className="space-y-4">
@@ -152,7 +152,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
                         <FormControl>
                           <Textarea
                             placeholder="Notunuzu buraya yazın..."
-                            className="min-h-[100px] border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                            className="min-h-[100px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                             {...field}
                           />
                         </FormControl>
@@ -164,7 +164,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                      className="bg-green-600 hover:bg-green-700"
                     >
                       <Save className="w-4 h-4 mr-1" />
                       {loading ? "Kaydediliyor..." : "Kaydet"}
@@ -190,28 +190,28 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
         {/* Notes List */}
         {notes.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            <div className="text-4xl mb-2">📝</div>
-            <p>Henüz not eklenmemiş</p>
-            <p className="text-sm">Yukarıdaki &quot;Yeni Not&quot; butonuna tıklayarak ilk notunuzu ekleyin</p>
+            <div className="text-2xl mb-2">📝</div>
+            <p className="text-gray-600">Henüz not eklenmemiş</p>
+            <p className="text-sm text-gray-500 mt-1">Yukarıdaki &quot;Yeni Not&quot; butonuna tıklayarak ilk notunuzu ekleyin</p>
           </div>
         ) : (
           <div className="space-y-3">
             {notes.map((note) => (
-              <Card key={note.id} className="border border-gray-200 hover:shadow-md transition-shadow">
+              <Card key={note.id} className="border border-gray-200 hover:bg-gray-50">
                 <CardContent className="p-4">
                   {editingNoteId === note.id ? (
                     <div className="space-y-3">
                       <Textarea
                         value={editForm}
                         onChange={(e) => setEditForm(e.target.value)}
-                        className="min-h-[80px] border-gray-200 focus:border-blue-400 focus:ring-blue-400"
+                        className="min-h-[80px] border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       />
                       <div className="flex gap-2">
                         <Button
                           onClick={() => handleEditNote(note.id, editForm)}
                           disabled={loading || !editForm.trim()}
                           size="sm"
-                          className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                          className="bg-green-600 hover:bg-green-700"
                         >
                           <Save className="w-4 h-4 mr-1" />
                           Kaydet
@@ -243,7 +243,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
                             onClick={() => startEdit(note)}
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 hover:bg-blue-100"
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
                           >
                             <Edit2 className="w-4 h-4 text-blue-600" />
                           </Button>
@@ -251,7 +251,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
                             onClick={() => handleDeleteNote(note.id)}
                             variant="ghost"
                             size="sm"
-                            className="h-8 w-8 p-0 hover:bg-red-100"
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
                           >
                             <Trash2 className="w-4 h-4 text-red-600" />
                           </Button>

@@ -29,33 +29,31 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-4xl font-bold tracking-tight gradient-text mb-2">Müşteri Takip Sistemi</h1>
-              <p className="text-muted-foreground mt-2 text-lg">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Müşteri Takip Sistemi</h1>
+              <p className="text-gray-600 mt-1">
                 Müşterilerinizi yönetin ve bilgilerini etkili bir şekilde takip edin
               </p>
             </div>
-            <Button onClick={handleAddCustomer} size="lg" className="shadow-lg hover:shadow-xl transition-all duration-200">
+            <Button onClick={handleAddCustomer} size="lg" className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-5 h-5 mr-2" />
               Müşteri Ekle
             </Button>
           </div>
         </div>
 
-        <Card className="card-shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-          <CardContent className="p-6">
+
             <CustomerList
               onAddCustomer={handleAddCustomer}
               onEditCustomer={handleEditCustomer}
               onViewCustomer={handleViewCustomer}
               refreshTrigger={refreshTrigger}
             />
-          </CardContent>
-        </Card>
+  
       </div>
     </div>
   )

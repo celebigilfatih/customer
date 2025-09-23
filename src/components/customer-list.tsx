@@ -107,9 +107,9 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
+      <Card className="border border-gray-200 shadow-sm">
         <CardHeader className="pb-4">
-          <CardTitle className="text-2xl font-semibold text-gray-800">Müşteri Listesi</CardTitle>
+          <CardTitle className="text-xl font-semibold text-gray-800">Müşteri Listesi</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -119,16 +119,10 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                 placeholder="Müşteri ara..."
                 value={search}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="pl-10 bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400 shadow-sm"
+                className="pl-10 bg-white border-gray-200 focus:border-blue-400 focus:ring-blue-400"
               />
             </div>
-            <Button 
-              onClick={onAddCustomer} 
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Müşteri
-            </Button>
+
           </div>
 
           {loading ? (
@@ -146,10 +140,10 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
             </div>
           ) : (
             <>
-              <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50/50">
+                    <TableRow className="bg-gray-50">
                       <TableHead className="font-semibold text-gray-700">Ad Soyad</TableHead>
                       <TableHead className="font-semibold text-gray-700">Kulüp</TableHead>
                       <TableHead className="font-semibold text-gray-700">İl</TableHead>
@@ -161,7 +155,7 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                   </TableHeader>
                   <TableBody>
                     {customers.map((customer) => (
-                      <TableRow key={customer.id} className="hover:bg-blue-50/30 transition-colors duration-150">
+                      <TableRow key={customer.id} className="hover:bg-gray-50">
                         <TableCell className="font-medium text-gray-900">{customer.fullName}</TableCell>
                         <TableCell className="text-gray-700">{customer.club}</TableCell>
                         <TableCell className="text-gray-700">{customer.city}</TableCell>
@@ -176,7 +170,7 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                               variant="ghost"
                               size="sm"
                               onClick={() => onViewCustomer(customer)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              className="text-blue-600 hover:text-blue-700"
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
@@ -184,7 +178,7 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                               variant="ghost"
                               size="sm"
                               onClick={() => onEditCustomer(customer)}
-                              className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                              className="text-amber-600 hover:text-amber-700"
                             >
                               <Edit className="w-4 h-4" />
                             </Button>
@@ -192,7 +186,7 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDelete(customer.id)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              className="text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
