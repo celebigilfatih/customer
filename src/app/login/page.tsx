@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, User, Lock } from "lucide-react"
+import { apiPost } from "@/lib/api"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -31,13 +32,7 @@ export default function LoginPage() {
 
     try {
       // API call to authenticate user
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      })
+      const response = await apiPost('/api/auth/login', { username, password })
 
       const data = await response.json()
 

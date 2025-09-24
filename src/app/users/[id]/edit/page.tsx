@@ -1,17 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-
-interface User {
-  id: string;
-  username: string;
-  fullName: string;
-  email: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { apiGet, apiPut } from "@/lib/api";
 
 export default function EditUserPage() {
   const params = useParams();
@@ -29,13 +26,9 @@ export default function EditUserPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchUser();
-  }, [userId]);
-
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
-      const response = await fetch(`/api/users/${userId}`);
+      const response = await apiGet(`/api/users/${userId}`);
       if (!response.ok) {
         throw new Error('Kullanıcı bulunamadı');
       }
@@ -52,7 +45,11 @@ export default function EditUserPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -70,16 +67,11 @@ export default function EditUserPage() {
     try {
       const updateData = { ...formData };
       if (!updateData.password) {
-        delete updateData.password;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        delete (updateData as any).password;
       }
 
-      const response = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
+      const response = await apiPut(`/api/users/${userId}`, updateData);
 
       if (!response.ok) {
         const errorData = await response.json();

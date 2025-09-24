@@ -6,13 +6,14 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { customerCreateSchema, CustomerCreate } from "@/lib/validations"
-import { Customer } from "@/generated/prisma"
-import { toast } from "sonner"
+import { Customer, CustomerStatus } from "@/generated/prisma"
+import { customerCreateSchema, type CustomerCreate } from "@/lib/validations"
 import { getCities } from "@/lib/cities"
+import { toast } from "sonner"
+import { apiPost, apiPut } from "@/lib/api"
 
 interface CustomerFormProps {
   customer?: Customer
@@ -81,14 +82,9 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel }: Custom
         await onSubmit(data)
       } else {
         // Default API call if no onSubmit provided
-        const url = customer ? `/api/customers/${customer.id}` : '/api/customers'
-        const method = customer ? 'PUT' : 'POST'
-        
-        const response = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        })
+        const response = customer 
+          ? await apiPut(`/api/customers/${customer.id}`, data)
+          : await apiPost('/api/customers', data)
         
         if (!response.ok) {
           throw new Error('Failed to save customer')

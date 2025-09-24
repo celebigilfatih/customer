@@ -1,15 +1,12 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { CustomerList } from "@/components/customer-list"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerListItem } from "@/lib/types"
 import { Plus, LogOut, Users } from "lucide-react"
 
 export default function HomePage() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const router = useRouter()
 
   const handleAddCustomer = () => {
@@ -22,10 +19,6 @@ export default function HomePage() {
 
   const handleViewCustomer = (customer: CustomerListItem) => {
     router.push(`/customers/${customer.id}`)
-  }
-
-  const handleRefresh = () => {
-    setRefreshTrigger(prev => prev + 1)
   }
 
   const handleLogout = () => {
@@ -64,10 +57,8 @@ export default function HomePage() {
 
      
             <CustomerList
-              onAddCustomer={handleAddCustomer}
               onEditCustomer={handleEditCustomer}
               onViewCustomer={handleViewCustomer}
-              refreshTrigger={refreshTrigger}
             />
       </div>
     </div>

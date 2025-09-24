@@ -1,29 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerWithNotes } from "@/lib/types"
 import { CustomerNotes } from "@/components/customer-notes"
 import { Edit, Phone, MapPin, Building } from "lucide-react"
 import { toast } from "sonner"
+import { apiGet } from "@/lib/api"
 
 interface CustomerDetailProps {
   customerId: string
   onEdit: () => void
-  onBack: () => void
 }
 
-export function CustomerDetail({ customerId, onEdit, onBack }: CustomerDetailProps) {
+export function CustomerDetail({ customerId, onEdit }: CustomerDetailProps) {
   const [customer, setCustomer] = useState<CustomerWithNotes | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchCustomer = async () => {
-    setLoading(true)
+  const fetchCustomer = useCallback(async () => {
     try {
-      const response = await fetch(`/api/customers/${customerId}`)
+      setLoading(true)
+      const response = await apiGet(`/api/customers/${customerId}`)
       if (!response.ok) {
-        throw new Error('Müşteri bilgileri alınamadı')
+        throw new Error('Failed to fetch customer')
       }
       const data = await response.json()
       setCustomer(data)
@@ -33,11 +33,11 @@ export function CustomerDetail({ customerId, onEdit, onBack }: CustomerDetailPro
     } finally {
       setLoading(false)
     }
-  }
+  }, [customerId])
 
   useEffect(() => {
     fetchCustomer()
-  }, [customerId])
+  }, [customerId, fetchCustomer])
 
   const handleNotesUpdate = () => {
     fetchCustomer() // Refresh customer data when notes are updated

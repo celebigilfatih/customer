@@ -4,26 +4,19 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Search, Edit, Eye, Trash2 } from "lucide-react"
 import { CustomerListItem, PaginatedResponse } from "@/lib/types"
-import { Search, Plus, Edit, Trash2, Eye } from "lucide-react"
 import { toast } from "sonner"
+import { apiGet, apiDelete } from "@/lib/api"
 
 interface CustomerListProps {
-  onAddCustomer: () => void
   onEditCustomer: (customer: CustomerListItem) => void
   onViewCustomer: (customer: CustomerListItem) => void
   refreshTrigger?: number
 }
 
-export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, refreshTrigger }: CustomerListProps) {
+export function CustomerList({ onEditCustomer, onViewCustomer, refreshTrigger }: CustomerListProps) {
   const [customers, setCustomers] = useState<CustomerListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -44,7 +37,7 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
         ...(search && { search }),
       })
 
-      const response = await fetch(`/api/customers?${params}`)
+      const response = await apiGet(`/api/customers?${params}`)
       if (!response.ok) {
         throw new Error('Failed to fetch customers')
       }
@@ -75,9 +68,7 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
     }
 
     try {
-      const response = await fetch(`/api/customers/${id}`, {
-        method: 'DELETE',
-      })
+      const response = await apiDelete(`/api/customers/${id}`)
 
       if (!response.ok) {
         throw new Error('Failed to delete customer')
@@ -89,20 +80,6 @@ export function CustomerList({ onAddCustomer, onEditCustomer, onViewCustomer, re
       console.error('Error deleting customer:', error)
       toast.error('Müşteri silinirken hata oluştu')
     }
-  }
-
-  // Utility functions (not used but kept for potential future use)
-  const formatPrice = (price: string | number | null) => {
-    if (!price) return '-'
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
-    }).format(Number(price))
-  }
-
-  const formatDate = (date: string | Date | null) => {
-    if (!date) return '-'
-    return new Date(date).toLocaleDateString('tr-TR')
   }
 
   return (

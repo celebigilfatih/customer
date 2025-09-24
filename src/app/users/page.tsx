@@ -1,7 +1,13 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Trash2, Edit, Plus, User } from "lucide-react"
+import Link from "next/link"
+import { toast } from "sonner"
+import { apiGet, apiDelete, apiPut } from "@/lib/api"
 
 interface User {
   id: string;
@@ -25,7 +31,7 @@ export default function UsersPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users');
+      const response = await apiGet('/api/users');
       if (!response.ok) {
         throw new Error('Kullanıcılar yüklenemedi');
       }
@@ -44,9 +50,7 @@ export default function UsersPage() {
     }
 
     try {
-      const response = await fetch(`/api/users/${id}`, {
-        method: 'DELETE',
-      });
+      const response = await apiDelete(`/api/users/${id}`);
 
       if (!response.ok) {
         throw new Error('Kullanıcı silinemedi');
@@ -60,22 +64,17 @@ export default function UsersPage() {
 
   const handleToggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const response = await fetch(`/api/users/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ isActive: !currentStatus }),
-      });
+      const response = await apiPut(`/api/users/${id}`, { isActive: !currentStatus });
 
       if (!response.ok) {
         throw new Error('Kullanıcı durumu güncellenemedi');
       }
 
-      const updatedUser = await response.json();
-      setUsers(users.map(user => user.id === id ? updatedUser : user));
+      setUsers(users.map(user => 
+        user.id === id ? { ...user, isActive: !currentStatus } : user
+      ));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Durum güncelleme başarısız');
+      alert(err instanceof Error ? err.message : 'Güncelleme işlemi başarısız');
     }
   };
 

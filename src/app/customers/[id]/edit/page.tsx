@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 import { Customer } from "@/generated/prisma"
+import { apiGet } from "@/lib/api"
 
 export default function EditCustomerPage() {
   const router = useRouter()
@@ -17,7 +18,7 @@ export default function EditCustomerPage() {
   useEffect(() => {
     const fetchCustomer = async () => {
       try {
-        const response = await fetch(`/api/customers/${params.id}`)
+        const response = await apiGet(`/api/customers/${params.id}`)
         if (!response.ok) {
           throw new Error('Müşteri bulunamadı')
         }

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const validation = loginSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Geçersiz veri', details: validation.error.errors },
+        { error: 'Geçersiz veri', details: validation.error.issues },
         { status: 400 }
       )
     }

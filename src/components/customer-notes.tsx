@@ -11,6 +11,7 @@ import { noteCreateSchema, NoteCreate } from "@/lib/validations"
 import { CustomerWithNotes } from "@/lib/types"
 import { toast } from "sonner"
 import { Plus, Edit2, Trash2, Save, X } from "lucide-react"
+import { apiPost, apiPut, apiDelete } from "@/lib/api"
 
 interface CustomerNotesProps {
   customer: CustomerWithNotes
@@ -36,11 +37,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
   const handleAddNote = async (data: NoteCreate) => {
     setLoading(true)
     try {
-      const response = await fetch('/api/notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
+      const response = await apiPost('/api/notes', data)
 
       if (!response.ok) {
         throw new Error('Not eklenirken hata oluştu')
@@ -62,11 +59,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
   const handleEditNote = async (noteId: string, content: string) => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-      })
+      const response = await apiPut(`/api/notes/${noteId}`, { content })
 
       if (!response.ok) {
         throw new Error('Not güncellenirken hata oluştu')
@@ -90,9 +83,7 @@ export function CustomerNotes({ customer, onNotesUpdate }: CustomerNotesProps) {
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/notes/${noteId}`, {
-        method: 'DELETE'
-      })
+      const response = await apiDelete(`/api/notes/${noteId}`)
 
       if (!response.ok) {
         throw new Error('Not silinirken hata oluştu')
