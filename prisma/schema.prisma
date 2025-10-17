@@ -1,12 +1,8 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -14,58 +10,100 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum CustomerStatus {
-  POTENTIAL
-  CONTACTED
-  INTERESTED
-  CONVERTED
+// Başvuru durumları için enum
+enum ApplicationStatus {
+  PENDING
+  APPROVED
   REJECTED
-  SOLD
 }
 
-model Customer {
-  id                   String         @id @default(cuid())
-  fullName            String
-  phoneNumber         String
-  city                String
-  district            String
-  club                String
-  sportsSchoolOfficial String
-  hosting             String
-  duration            String
-  startDate           String
-  endDate             String
-  offer               String
-  address             String
-  status              CustomerStatus @default(POTENTIAL)
-  price               String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  notes               Note[]
-
-  @@map("customers")
+// Yaş grupları için enum
+enum AgeGroup {
+  Y2012
+  Y2013
+  Y2014
+  Y2015
+  Y2016
+  Y2017
+  Y2018
+  Y2019
+  Y2020
+  Y2021
+  Y2022
 }
 
-model Note {
-  id         String   @id @default(cuid())
-  content    String
-  customerId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-
-  @@map("notes")
+// Etap bilgileri için enum
+enum Stage {
+  STAGE_1
+  STAGE_2
 }
 
-model User {
+// Takım başvuruları tablosu
+model TeamApplication {
+  id          String            @id @default(cuid())
+  teamName    String
+  coachName   String
+  phoneNumber String
+  website     String?
+  instagram   String?
+  twitter     String?
+  facebook    String?
+  stage       Stage
+  ageGroups   AgeGroup[]
+  description String?
+  logoUrl     String?
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  // Onaylandığında Team tablosuna aktarılır
+  approvedTeam Team?
+
+  @@map("team_applications")
+}
+
+// Kesin katılımcı takımlar tablosu
+model Team {
+  id               String     @id @default(cuid())
+  teamName         String
+  coachName        String
+  phoneNumber      String
+  stage            Stage
+  ageGroups        AgeGroup[]
+  description      String?
+  logoUrl          String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  
+  // Başvuru ile ilişki (opsiyonel, manuel eklenen takımlar için)
+  applicationId    String?    @unique
+  application      TeamApplication? @relation(fields: [applicationId], references: [id])
+
+  @@map("teams")
+}
+
+// Yönetici kullanıcıları tablosu
+model Admin {
   id        String   @id @default(cuid())
-  username  String   @unique
+  email     String   @unique
+  name      String
   password  String
-  fullName  String?
-  email     String?
-  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("users")
+  @@map("admins")
+}
+
+// Sistem ayarları tablosu
+model Settings {
+  id                    String  @id @default(cuid())
+  registrationOpen      Boolean @default(true)
+  maxTeamsPerStage      Int     @default(32)
+  allowedAgeGroups      AgeGroup[]
+  availableStages       Stage[]
+  notificationEmail     String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("settings")
 }
