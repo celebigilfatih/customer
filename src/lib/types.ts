@@ -5,7 +5,7 @@ export type CustomerWithNotes = Customer & {
 }
 
 export type CustomerListItem = Pick<Customer, 
-  'id' | 'fullName' | 'club' | 'city' | 'district' | 'offer' | 'startDate' | 'endDate' | 'status' | 'duration'
+  'id' | 'fullName' | 'phoneNumber' | 'club' | 'city' | 'district'
 >
 
 export interface PaginatedResponse<T> {

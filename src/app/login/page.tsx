@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { routes } from "@/lib/routes"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -42,11 +43,13 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Set authentication cookie
-        document.cookie = `auth-token=${data.user.id}; path=/; max-age=86400` // 24 hours
-        
-        // Redirect to main page
-        router.push("/")
+        document.cookie = `auth-token=${data.user.id}; path=/; max-age=86400`
+        document.cookie = `role=${data.user.role}; path=/; max-age=86400`
+        if (data.user.role === 'ADMIN' || data.user.role === 'SUPPORT') {
+          router.push(routes.admin.dashboard)
+        } else {
+          router.push(routes.portal.dashboard)
+        }
       } else {
         setError(data.error || "Geçersiz kullanıcı adı veya şifre")
       }

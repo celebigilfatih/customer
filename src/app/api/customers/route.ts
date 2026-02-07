@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { CustomerStatus } from '@/generated/prisma'
+// removed status import as create no longer sets it explicitly
 import { customerCreateSchema } from '@/lib/validations'
 import { handleApiError, sanitizeInput } from '@/lib/error-handler'
 
@@ -72,11 +72,6 @@ export async function POST(request: NextRequest) {
       district: sanitizeInput(body.district),
       club: body.club ? sanitizeInput(body.club) : null,
       sportsSchoolOfficial: body.sportsSchoolOfficial ? sanitizeInput(body.sportsSchoolOfficial) : null,
-      hosting: body.hosting ? sanitizeInput(body.hosting) : null,
-      duration: body.duration ? sanitizeInput(body.duration) : null,
-      startDate: body.startDate ? sanitizeInput(body.startDate) : null,
-      endDate: body.endDate ? sanitizeInput(body.endDate) : null,
-      offer: body.offer ? sanitizeInput(body.offer) : null,
       address: body.address ? sanitizeInput(body.address) : null,
     }
 
@@ -85,7 +80,11 @@ export async function POST(request: NextRequest) {
     // Convert status to Prisma enum if present
     const createData = {
       ...validatedData,
-      status: validatedData.status as CustomerStatus // Cast to proper enum type
+      hosting: "",
+      duration: "",
+      startDate: "",
+      endDate: "",
+      offer: "",
     }
 
     const customer = await prisma.customer.create({

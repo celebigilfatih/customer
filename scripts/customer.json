@@ -1,0 +1,16 @@
+{
+  "fullName": "Demo Customer",
+  "phoneNumber": "5555555555",
+  "city": "Istanbul",
+  "district": "Kadikoy",
+  "club": "Demo Club",
+  "sportsSchoolOfficial": "Yetkili",
+  "duration": "1",
+  "startDate": "2025-01-01",
+  "endDate": "2026-01-01",
+  "offer": "Demo offer",
+  "hosting": "Shared plan",
+  "address": "Test address 12345",
+  "status": "CONVERTED",
+  "price": "1000"
+}

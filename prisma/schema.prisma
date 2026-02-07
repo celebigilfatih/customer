@@ -6,12 +6,12 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL")
 }
 
 enum CustomerStatus {
@@ -42,6 +42,23 @@ model Customer {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   notes               Note[]
+  userAccounts        User[]
+  subscriptions       Subscription[]
+  domains             Domain[]
+  hostings            Hosting[]
+  tasks               Task[]
+  payments            Payment[]
+  notifications       Notification[]
+  files               File[]
+  proposals           Proposal[]
+  
+  // YENİ: Muhasebe ilişkileri
+  accountTransactions AccountTransaction[]
+  invoices            Invoice[]
+  
+  // YENİ: Açılış bakiyesi
+  openingBalance      Decimal        @default(0)
+  openingBalanceDate  DateTime?
 
   @@map("customers")
 }
@@ -66,6 +83,575 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  role      Role     @default(SUPPORT)
+  customer  Customer? @relation(fields: [customerId], references: [id])
+  customerId String?
+
+  tasks     Task[]
+  comments  TaskComment[]
 
   @@map("users")
+}
+
+enum Role {
+  ADMIN
+  SUPPORT
+  CUSTOMER
+}
+
+enum SubscriptionType {
+  SOFTWARE_RENTAL
+  CUSTOM_PROJECT
+  MAINTENANCE
+  NEXT_GEN_COACHING
+  AIDAT_TAKIP
+  FOOTBALL_CMS
+  DOMAIN
+  HOSTING
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+model Subscription {
+  id           String            @id @default(cuid())
+  customer     Customer          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String
+  name         String
+  type         SubscriptionType[]
+  period       BillingPeriod
+  startDate    DateTime
+  endDate      DateTime
+  autoRenew    Boolean           @default(false)
+  status       SubscriptionStatus @default(ACTIVE)
+  price        String
+  installmentCount Int?
+  proposalType String?           // Added for proposal type association
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  payments     Payment[]
+  files        File[]
+
+  @@map("subscriptions")
+}
+
+model Domain {
+  id           String   @id @default(cuid())
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String
+  name         String   @unique
+  registrar    String
+  registerDate DateTime
+  renewDate    DateTime
+  whoisNote    String?
+  autoRenew    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  files        File[]
+
+  @@map("domains")
+}
+
+model Hosting {
+  id         String   @id @default(cuid())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  package    String
+  server     String
+  ip         String
+  panelUrl   String?
+  panelUser  String?
+  panelPass  String?
+  endDate    DateTime
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  files      File[]
+
+  @@map("hosting")
+}
+
+enum TaskStatus {
+  OPEN
+  PENDING
+  DONE
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId  String
+  title       String
+  description String
+  status      TaskStatus @default(OPEN)
+  assignee    User?     @relation(fields: [assigneeId], references: [id])
+  assigneeId  String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  comments    TaskComment[]
+  files       File[]
+
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@map("task_comments")
+}
+
+enum PaymentStatus {
+  DUE
+  LATE
+  PAID
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId    String
+  
+  // Fatura ilişkisi (YENİ)
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+  invoiceId     String?
+  
+  subscription  Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String?
+  
+  // YENİ: Ödeme türü
+  type          PaymentType @default(CASH)
+  
+  // Tutar - Decimal olarak değiştirildi
+  amount        Decimal
+  currency      String   @default("TRY")
+  
+  // Tarih (YENİ: dueDate yerine date)
+  date          DateTime
+  dueDate       DateTime? // Geriye uyumluluk için
+  paidDate      DateTime?
+  
+  // Durum
+  status        PaymentStatus @default(DUE)
+  
+  // Açıklama
+  note          String?
+  description   String? // YENİ
+  
+  // YENİ: Cari hareket ilişkisi
+  accountTransactions AccountTransaction[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("payments")
+}
+
+// YENİ: Ödeme türü enum
+enum PaymentType {
+  CASH        // Nakit
+  TRANSFER    // Havale/EFT
+  CREDIT_CARD // Kredi kartı
+}
+
+enum NotificationType {
+  DOMAIN_RENEWAL
+  HOSTING_RENEWAL
+  SUBSCRIPTION_PAYMENT
+  MAINTENANCE_EXPIRY
+  ADMIN_REMINDER
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+model Notification {
+  id           String   @id @default(cuid())
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId   String
+  type         NotificationType
+  channel      NotificationChannel
+  message      String
+  scheduledAt  DateTime
+  sentAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  @@map("notifications")
+}
+
+enum JobType {
+  DAILY_SCAN
+}
+
+model JobSchedule {
+  id        String   @id @default(cuid())
+  type      JobType
+  lastRun   DateTime?
+  nextRun   DateTime?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("job_schedules")
+}
+
+model File {
+  id             String        @id @default(cuid())
+  url            String
+  name           String
+  type           String?
+  size           Int?
+  customer       Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerId     String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  subscriptionId String?
+  domain         Domain?       @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  domainId       String?
+  hosting        Hosting?      @relation(fields: [hostingId], references: [id], onDelete: SetNull)
+  hostingId      String?
+  task           Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  taskId         String?
+  createdAt      DateTime      @default(now())
+
+  @@map("files")
+}
+
+model WebhookLog {
+  id         String   @id @default(cuid())
+  event      String
+  url        String
+  ok         Boolean
+  statusCode Int?
+  error      String?
+  attempt    Int
+  timestamp  DateTime
+
+  @@map("webhook_logs")
+}
+
+model WebhookQueue {
+  id       String   @id @default(cuid())
+  event    String
+  url      String
+  body     String
+  secret   String?
+  attempt  Int
+  nextAt   DateTime
+  createdAt DateTime @default(now())
+
+  @@map("webhook_queue")
+}
+
+enum ProposalStatus {
+  DRAFT       // Taslak
+  SENT        // Gönderildi
+  PENDING     // Beklemede (görüldü)
+  APPROVED    // Onaylandı
+  REJECTED    // Reddedildi
+  EXPIRED     // Süresi doldu
+  CONVERTED   // Faturaya dönüştürüldü
+}
+
+enum ProposalType {
+  SUBSCRIPTION    // Abonelik
+  PROJECT         // Proje
+  MAINTENANCE     // Bakım Anlaşması
+  RENEWAL         // Yenileme
+  NETWORK         // Network
+  HARDWARE        // Donanım
+  SOFTWARE        // Yazılım
+  SERVICE         // Hizmet
+  CONSULTING      // Danışmanlık
+  OTHER           // Diğer
+}
+
+model Proposal {
+  id          String        @id @default(cuid())
+  customer    Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId  String
+  
+  // Teklif numarası
+  number      String        @unique
+  
+  title       String
+  type        ProposalType
+  description String?
+  amount      Decimal
+  currency    String        @default("TRY")
+  validUntil  DateTime
+  status      ProposalStatus @default(DRAFT)
+  
+  // Gönderim bilgisi
+  sentAt      DateTime?
+  
+  // Onay bilgisi
+  approvedBy  String?
+  approvedAt  DateTime?
+  
+  // Red bilgisi
+  rejectedAt  DateTime?
+  rejectReason String?
+  
+  notes       String?
+  
+  // YENİ: Satırlar
+  items       ProposalItem[]
+  
+  // YENİ: Fatura ilişkisi
+  invoices    Invoice[]
+  
+  // YENİ: Cari hareket
+  accountTransactions AccountTransaction[]
+  
+  // YENİ: Stok hareket
+  stockMovements StockMovement[]
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("proposals")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// ============================================
+// MUHASEBE MODÜLLERİ - YENİ MODELLER
+// ============================================
+
+// Cari Hesap Hareketleri
+model AccountTransaction {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  // Hareket türü
+  type        TransactionType
+  
+  // Borç/Alacak
+  debit       Decimal  @default(0)
+  credit      Decimal  @default(0)
+  
+  // Bakiye (running balance)
+  balance     Decimal
+  
+  // İlişkiler
+  proposalId  String?
+  proposal    Proposal? @relation(fields: [proposalId], references: [id])
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+  paymentId   String?
+  payment     Payment? @relation(fields: [paymentId], references: [id])
+  
+  // Açıklama
+  description String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@map("account_transactions")
+}
+
+enum TransactionType {
+  OPENING_BALANCE   // Açılış bakiyesi
+  PROPOSAL_DEBT     // Teklif borcu
+  INVOICE_DEBT      // Fatura borcu
+  PAYMENT_CREDIT    // Tahsilat
+  MANUAL_ADJUSTMENT // Manuel düzeltme
+}
+
+// Ürün Grubu
+model ProductGroup {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  color       String    @default("#3b82f6") // Varsayılan mavi renk
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("product_groups")
+}
+
+// Stok/Ürün Kartı
+model Product {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  
+  // Grup ilişkisi
+  groupId     String?
+  group       ProductGroup? @relation(fields: [groupId], references: [id])
+  
+  // Stok takibi
+  stockQuantity Decimal @default(0)
+  minStockLevel Decimal @default(0)
+  
+  // Fiyat
+  unitPrice   Decimal
+  currency    String   @default("TRY")
+  
+  // Stok hareketleri
+  movements   StockMovement[]
+  
+  // Teklif satırları
+  proposalItems ProposalItem[]
+  
+  // Fatura satırları
+  invoiceItems InvoiceItem[]
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("products")
+}
+
+// Stok Hareketleri
+model StockMovement {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  type        MovementType
+  quantity    Decimal
+  
+  // İlişkiler
+  proposalId  String?
+  proposal    Proposal? @relation(fields: [proposalId], references: [id])
+  invoiceId   String?
+  invoice     Invoice? @relation(fields: [invoiceId], references: [id])
+  
+  description String?
+  createdAt   DateTime @default(now())
+  
+  @@map("stock_movements")
+}
+
+enum MovementType {
+  IN          // Giriş
+  OUT         // Çıkış
+  ADJUSTMENT  // Düzeltme
+}
+
+// Teklif Detayları (Satırlar)
+model ProposalItem {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  
+  description String
+  quantity    Decimal  @default(1)
+  unitPrice   Decimal
+  totalPrice  Decimal
+  
+  @@map("proposal_items")
+}
+
+// Fatura
+model Invoice {
+  id          String   @id @default(cuid())
+  
+  // Fatura numarası
+  number      String   @unique
+  
+  // Müşteri
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  // Tekliften oluşturulduysa
+  proposalId  String?
+  proposal    Proposal? @relation(fields: [proposalId], references: [id])
+  
+  // Fatura türü
+  type        InvoiceType
+  
+  // Tutarlar
+  subtotal    Decimal
+  taxRate     Decimal  @default(20)
+  taxAmount   Decimal
+  total       Decimal
+  
+  // Durum
+  status      InvoiceStatus @default(DRAFT)
+  
+  // Tarihler
+  issueDate   DateTime
+  dueDate     DateTime
+  
+  // Satırlar
+  items       InvoiceItem[]
+  
+  // Tahsilatlar
+  payments    Payment[]
+  
+  // Stok hareketleri
+  stockMovements StockMovement[]
+  
+  // Cari hareket
+  accountTransactions AccountTransaction[]
+  
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("invoices")
+}
+
+enum InvoiceType {
+  SALE      // Satış
+  RETURN    // İade
+}
+
+enum InvoiceStatus {
+  DRAFT     // Taslak
+  ISSUED    // Kesildi
+  PARTIAL   // Kısmen ödendi
+  PAID      // Ödendi
+  CANCELLED // İptal
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  
+  description String
+  quantity    Decimal
+  unitPrice   Decimal
+  totalPrice  Decimal
+  
+  @@map("invoice_items")
 }

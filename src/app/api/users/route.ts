@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     const validation = userCreateSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Geçersiz veri', details: validation.error.errors },
+        { error: 'Geçersiz veri', details: validation.error.issues },
         { status: 400 }
       )
     }

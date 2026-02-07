@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@/generated/prisma'
-import { userUpdateSchema } from '@/lib/validations'
+import { userUpdateSchema, UserUpdate } from '@/lib/validations'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         username: true,
@@ -42,7 +43,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const body = await request.json()
@@ -51,16 +52,17 @@ export async function PUT(
     const validation = userUpdateSchema.safeParse(body)
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Geçersiz veri', details: validation.error.errors },
+        { error: 'Geçersiz veri', details: validation.error.issues },
         { status: 400 }
       )
     }
 
     const { username, password, fullName, email, isActive } = validation.data
+    const { id } = await params
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingUser) {
@@ -75,7 +77,7 @@ export async function PUT(
       const usernameExists = await prisma.user.findFirst({
         where: {
           username,
-          NOT: { id: params.id },
+          NOT: { id },
         },
       })
 
@@ -88,7 +90,7 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: Partial<UserUpdate> = {
       fullName,
       email,
       isActive,
@@ -104,7 +106,7 @@ export async function PUT(
 
     // Update user
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -129,12 +131,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+    
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
 
     if (!existingUser) {
@@ -146,7 +150,7 @@ export async function DELETE(
 
     // Delete user
     await prisma.user.delete({
-      where: { id: params.id },
+      where: { id },
     })
 
     return NextResponse.json({ message: 'Kullanıcı başarıyla silindi' })

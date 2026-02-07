@@ -1,0 +1,11 @@
+{
+  "customerId": "cmia3gigh0000p6011y9k7rgo",
+  "name": "Demo Multi Type",
+  "types": ["SOFTWARE_RENTAL", "DOMAIN", "HOSTING"],
+  "period": "MONTHLY",
+  "startDate": "2025-01-01",
+  "endDate": "2026-01-01",
+  "autoRenew": false,
+  "status": "ACTIVE",
+  "price": "100"
+}

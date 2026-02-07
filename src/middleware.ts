@@ -1,84 +1,100 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { apiRateLimit } from '@/lib/rate-limiter'
+
+const RATE_LIMIT_WINDOW_MS = 10000
+const RATE_LIMIT_MAX = 10
+declare global { var __rateStore: Map<string, number[]> | undefined }
+const rateStore = globalThis.__rateStore || (globalThis.__rateStore = new Map<string, number[]>())
 
 export function middleware(request: NextRequest) {
-  // Check authentication for protected routes
-  const authToken = request.cookies.get('auth-token')?.value
-  const isAuthenticated = authToken && authToken !== 'authenticated' // Check if it's a user ID, not the old hardcoded value
-  const isLoginPage = request.nextUrl.pathname === '/login'
-  
-  // If trying to access login page while authenticated, redirect to home
-  if (isLoginPage && isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url))
+  const getClientIp = (req: NextRequest & { ip?: string }): string =>
+    (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+     req.headers.get('x-real-ip') ||
+     req.headers.get('cf-connecting-ip') ||
+     req.ip ||
+     '127.0.0.1')
+  const limitByIp = (ip: string) => {
+    const now = Date.now()
+    let arr = rateStore.get(ip) || []
+    arr = arr.filter(ts => now - ts < RATE_LIMIT_WINDOW_MS)
+    if (arr.length >= RATE_LIMIT_MAX) {
+      const resetMs = RATE_LIMIT_WINDOW_MS - (now - arr[0])
+      return { allowed: false, remaining: 0, resetMs: Math.max(0, resetMs) }
+    }
+    arr.push(now)
+    rateStore.set(ip, arr)
+    const remaining = Math.max(0, RATE_LIMIT_MAX - arr.length)
+    const resetMs = arr.length ? RATE_LIMIT_WINDOW_MS - (now - arr[0]) : RATE_LIMIT_WINDOW_MS
+    return { allowed: true, remaining, resetMs }
   }
-  
-  // If trying to access protected routes without authentication, redirect to login
-  if (!isLoginPage && !isAuthenticated && !request.nextUrl.pathname.startsWith('/api/')) {
+
+  const authToken = request.cookies.get('auth-token')?.value
+  const isAuthenticated = Boolean(authToken)
+  const role = request.cookies.get('role')?.value
+  const { pathname } = request.nextUrl
+  const roleIsAdmin = role === 'ADMIN' || role === 'SUPPORT'
+  const roleIsCustomer = role === 'CUSTOMER'
+  const roleKnown = roleIsAdmin || roleIsCustomer
+
+  let rateRemaining: number | null = null
+  if (pathname.startsWith('/api/')) {
+    const ip = getClientIp(request)
+    const res = limitByIp(ip)
+    if (!res.allowed) {
+      return new Response('Too many requests', {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+          'X-RateLimit-Remaining': '0',
+          'Retry-After': String(Math.ceil(res.resetMs / 1000)),
+        },
+      })
+    }
+    rateRemaining = res.remaining
+  }
+
+  if (pathname === '/login' && isAuthenticated && roleKnown) {
+    const url = roleIsCustomer ? '/portal/dashboard' : '/admin/dashboard'
+    return NextResponse.redirect(new URL(url, request.url))
+  }
+
+  // If not authenticated, redirect any protected route to the login page
+  if (!isAuthenticated && !pathname.startsWith('/api/') && pathname !== '/login') {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Apply rate limiting to API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const rateLimitResult = apiRateLimit(request)
-    
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Too many requests',
-          message: `Rate limit exceeded. Try again in ${rateLimitResult.resetIn} seconds.`,
-          retryAfter: rateLimitResult.resetIn
-        },
-        { 
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-            'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
-            'Retry-After': rateLimitResult.resetIn.toString()
-          }
-        }
-      )
+  if (isAuthenticated) {
+    // Redirect from root based on role
+    if (pathname === '/') {
+      const url = roleIsCustomer ? '/portal/dashboard' : roleIsAdmin ? '/admin/dashboard' : '/login'
+      return NextResponse.redirect(new URL(url, request.url))
     }
 
-    // Add rate limit headers to successful responses
-    const response = NextResponse.next()
-    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString())
-    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString())
-    response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString())
-    
-    // Security headers for API routes
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    response.headers.set('X-Frame-Options', 'DENY')
-    response.headers.set('X-XSS-Protection', '1; mode=block')
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
-    
-    // CORS headers for API routes
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    
-    return response
+    // Role-based access control for admin and portal routes
+    if (pathname.startsWith('/admin') && !roleIsAdmin) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    if (pathname.startsWith('/portal') && !roleIsCustomer) {
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
   }
 
-  // Security headers for all other routes
+  // Default security headers for non-API routes
   const response = NextResponse.next()
   response.headers.set('X-Content-Type-Options', 'nosniff')
   response.headers.set('X-Frame-Options', 'DENY')
   response.headers.set('X-XSS-Protection', '1; mode=block')
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+  if (pathname.startsWith('/api/')) {
+    response.headers.set('X-RateLimit-Limit', String(RATE_LIMIT_MAX))
+    if (rateRemaining !== null) response.headers.set('X-RateLimit-Remaining', String(rateRemaining))
+  }
   
   return response
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 }

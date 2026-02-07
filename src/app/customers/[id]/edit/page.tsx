@@ -3,10 +3,10 @@
 import { useRouter, useParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { CustomerForm } from "@/components/customer-form"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { toast } from "sonner"
 import { Customer } from "@/generated/prisma"
+import { routes } from "@/lib/routes"
 
 export default function EditCustomerPage() {
   const router = useRouter()
@@ -26,7 +26,7 @@ export default function EditCustomerPage() {
       } catch (error) {
         console.error('Müşteri getirme hatası:', error)
         toast.error("Müşteri bulunamadı")
-        router.push('/')
+        router.push(routes.customers.list)
       } finally {
         setIsLoading(false)
       }
@@ -39,7 +39,7 @@ export default function EditCustomerPage() {
 
   const handleSuccess = () => {
     toast.success("Müşteri başarıyla güncellendi!")
-    router.push('/')
+    router.push(routes.customers.list)
   }
 
   const handleCancel = () => {
@@ -66,14 +66,7 @@ export default function EditCustomerPage() {
       <div className="container mx-auto py-8 px-4">
         <div className="mb-8">
           <div className="grid grid-cols-4 gap-4 items-center mb-4">
-            <Button 
-              variant="ghost" 
-              onClick={handleCancel}
-              className="hover:bg-gray-100"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Geri Dön
-            </Button>
+            <BackButton size="sm" fallbackHref={routes.customers.list} className="hover:bg-gray-100" />
             <div className="col-span-3">
               <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-2">
                 Müşteri Düzenle
@@ -86,6 +79,7 @@ export default function EditCustomerPage() {
         </div>
 
         <CustomerForm 
+          embedded
           customer={customer}
           onSuccess={handleSuccess}
           onCancel={handleCancel}

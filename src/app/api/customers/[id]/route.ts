@@ -66,7 +66,6 @@ export async function PUT(
     // Convert status to Prisma enum if present
     const updateData = {
       ...validatedData,
-      status: validatedData.status as CustomerStatus // Cast to proper enum type
     }
 
     const customer = await prisma.customer.update({

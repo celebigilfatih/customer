@@ -1,37 +1,31 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { CustomerList } from "@/components/customer-list"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerListItem } from "@/lib/types"
 import { Plus, LogOut, Users } from "lucide-react"
+import { routes } from "@/lib/routes"
 
 export default function HomePage() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const router = useRouter()
 
   const handleAddCustomer = () => {
-    router.push('/customers/add')
+    router.push(routes.customers.add)
   }
 
   const handleEditCustomer = (customer: CustomerListItem) => {
-    router.push(`/customers/${customer.id}/edit`)
+    router.push(routes.customers.edit(customer.id))
   }
 
   const handleViewCustomer = (customer: CustomerListItem) => {
-    router.push(`/customers/${customer.id}`)
-  }
-
-  const handleRefresh = () => {
-    setRefreshTrigger(prev => prev + 1)
+    router.push(routes.customers.detail(customer.id))
   }
 
   const handleLogout = () => {
     // Clear authentication cookie
     document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
-    router.push('/login')
+    router.push(routes.login)
   }
 
   return (
@@ -46,7 +40,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <Button onClick={() => router.push('/users')} size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+              <Button onClick={() => router.push(routes.users.list)} size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
                 <Users className="w-5 h-5 mr-2" />
                 Kullanıcılar
               </Button>
@@ -67,7 +61,6 @@ export default function HomePage() {
               onAddCustomer={handleAddCustomer}
               onEditCustomer={handleEditCustomer}
               onViewCustomer={handleViewCustomer}
-              refreshTrigger={refreshTrigger}
             />
       </div>
     </div>

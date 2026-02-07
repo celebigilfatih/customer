@@ -20,44 +20,28 @@ export const customerCreateSchema = z.object({
     .max(50, "İlçe 50 karakterden az olmalıdır"),
   
   club: z.string()
-    .min(2, "Kulüp en az 2 karakter olmalıdır")
-    .max(100, "Kulüp 100 karakterden az olmalıdır"),
+    .min(2, "Firma en az 2 karakter olmalıdır")
+    .max(100, "Firma 100 karakterden az olmalıdır"),
   
   sportsSchoolOfficial: z.string()
-    .min(2, "Spor okulu yetkilisi en az 2 karakter olmalıdır")
-    .max(100, "Spor okulu yetkilisi 100 karakterden az olmalıdır"),
+    .min(2, "Yetkili en az 2 karakter olmalıdır")
+    .max(100, "Yetkili 100 karakterden az olmalıdır"),
   
-  duration: z.string()
-    .min(1, "Süre seçimi gereklidir")
-    .regex(/^[1-5]$/, "Süre 1-5 yıl arasında olmalıdır"),
   
-  startDate: z.string()
-    .min(1, "Başlangıç tarihi gereklidir")
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerli bir tarih formatı girin"),
   
-  endDate: z.string()
-    .min(1, "Bitiş tarihi gereklidir")
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Geçerli bir tarih formatı girin"),
   
-  offer: z.string()
-    .min(1, "Teklif gereklidir")
-    .max(500, "Teklif 500 karakterden az olmalıdır"),
   
-  hosting: z.string()
-    .min(1, "Hosting bilgisi gereklidir")
-    .max(200, "Hosting bilgisi 200 karakterden az olmalıdır"),
   
   address: z.string()
     .min(10, "Adres en az 10 karakter olmalıdır")
     .max(500, "Adres 500 karakterden az olmalıdır"),
   
-  status: z.enum(['POTENTIAL', 'CONTACTED', 'INTERESTED', 'CONVERTED', 'REJECTED', 'SOLD'])
-    .default('POTENTIAL'),
+  
   
   price: z.string()
-    .min(1, "Fiyat gereklidir")
     .regex(/^[0-9]+$/, "Fiyat sadece sayı olmalıdır")
     .max(10, "Fiyat çok büyük olamaz")
+    .optional()
 })
 
 export const customerUpdateSchema = customerCreateSchema.partial()
@@ -109,3 +93,122 @@ export type CustomerFilters = z.infer<typeof customerFiltersSchema>
 export type UserCreate = z.infer<typeof userCreateSchema>
 export type UserUpdate = z.infer<typeof userUpdateSchema>
 export type Login = z.infer<typeof loginSchema>
+
+export const subscriptionCreateSchema = z.object({
+  customerId: z.string().min(1, 'Müşteri seçilmelidir'),
+  name: z.string().min(2, 'Ad en az 2 karakter').max(200, 'Ad 200 karakteri aşamaz').optional(),
+  types: z.array(z.string()).min(1, 'Tür seçilmelidir'),
+  period: z.enum(['MONTHLY', 'YEARLY']).default('MONTHLY'),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Başlangıç tarihi geçerli olmalıdır'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Bitiş tarihi geçerli olmalıdır'),
+  autoRenew: z.boolean().default(false),
+  status: z.enum(['ACTIVE', 'EXPIRED', 'CANCELED']).default('ACTIVE'),
+  price: z.string()
+    .regex(/^[0-9]+$/, 'Tutar TL ve sadece sayı olmalıdır')
+    .refine((v) => parseInt(v, 10) > 0, 'Tutar 0\'dan büyük olmalıdır')
+    .max(9, 'Tutar çok yüksek'),
+  installmentCount: z.coerce.number().int().min(1).optional(),
+  proposalType: z.string().optional(),
+}).refine((data) => {
+  // If proposalType is provided, it should not be empty
+  if (data.proposalType !== undefined && data.proposalType.trim() === '') {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Teklif türü boş olamaz',
+  path: ['proposalType'],
+});
+export const subscriptionUpdateSchema = subscriptionCreateSchema.partial()
+
+export const domainCreateSchema = z.object({
+  customerId: z.string().min(1),
+  name: z.string().min(3).max(253),
+  registrar: z.string().min(2).max(100),
+  registerDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  renewDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  whoisNote: z.string().max(1000).optional(),
+  autoRenew: z.boolean().default(false),
+})
+export const domainUpdateSchema = domainCreateSchema.partial()
+
+export const hostingCreateSchema = z.object({
+  customerId: z.string().min(1),
+  package: z.string().min(1).max(200),
+  server: z.string().min(1).max(200),
+  ip: z.string().regex(/^(?:\d{1,3}\.){3}\d{1,3}$/),
+  panelUrl: z.string().url().optional(),
+  panelUser: z.string().optional(),
+  panelPass: z.string().optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notes: z.string().max(1000).optional(),
+})
+export const hostingUpdateSchema = hostingCreateSchema.partial()
+
+export const taskCreateSchema = z.object({
+  customerId: z.string().min(1),
+  title: z.string().min(2).max(200),
+  description: z.string().min(1).max(4000),
+  status: z.enum(['OPEN', 'PENDING', 'DONE']).default('OPEN'),
+  assigneeId: z.string().optional(),
+})
+export const taskUpdateSchema = taskCreateSchema.partial()
+
+export const paymentCreateSchema = z.object({
+  customerId: z.string().min(1),
+  subscriptionId: z.string().optional(),
+  amount: z.string().regex(/^[0-9]+$/),
+  currency: z.string().min(1).max(10),
+  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  paidDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  status: z.enum(['DUE', 'LATE', 'PAID']).default('DUE'),
+  note: z.string().max(1000).optional(),
+})
+export const paymentUpdateSchema = paymentCreateSchema.partial()
+
+export type SubscriptionCreate = z.infer<typeof subscriptionCreateSchema>
+export type SubscriptionUpdate = z.infer<typeof subscriptionUpdateSchema>
+export type DomainCreate = z.infer<typeof domainCreateSchema>
+export type DomainUpdate = z.infer<typeof domainUpdateSchema>
+export type HostingCreate = z.infer<typeof hostingCreateSchema>
+export type HostingUpdate = z.infer<typeof hostingUpdateSchema>
+export type TaskCreate = z.infer<typeof taskCreateSchema>
+export type TaskUpdate = z.infer<typeof taskUpdateSchema>
+export type PaymentCreate = z.infer<typeof paymentCreateSchema>
+export type PaymentUpdate = z.infer<typeof paymentUpdateSchema>
+
+export const proposalItemSchema = z.object({
+  productId: z.string().min(1, 'Ürün seçilmelidir'),
+  description: z.string().min(1, 'Açıklama gereklidir'),
+  quantity: z.string().regex(/^[0-9]+$/, 'Miktar sayı olmalıdır'),
+  unitPrice: z.string().regex(/^[0-9]+$/, 'Birim fiyat sayı olmalıdır'),
+  totalPrice: z.string().regex(/^[0-9]+$/, 'Toplam fiyat sayı olmalıdır'),
+})
+
+export const proposalCreateSchema = z.object({
+  customerId: z.string().min(1, 'Müşteri seçilmelidir'),
+  title: z.string().min(2, 'Başlık en az 2 karakter').max(200, 'Başlık 200 karakteri aşamaz'),
+  type: z.string().min(1, 'Teklif türü seçilmelidir'),
+  description: z.string().max(5000, 'Açıklama 5000 karakteri aşamaz').optional(),
+  amount: z.string()
+    .regex(/^[0-9]+$/, 'Tutar TL ve sadece sayı olmalıdır')
+    .refine((v) => parseInt(v, 10) > 0, 'Tutar 0\'dan büyük olmalıdır')
+    .max(9, 'Tutar çok yüksek'),
+  currency: z.string().min(1).max(10).default('TRY'),
+  validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Geçerli tarih formatı YYYY-MM-DD olmalıdır'),
+  notes: z.string().max(2000, 'Notlar 2000 karakteri aşamaz').optional(),
+  items: z.array(proposalItemSchema).optional(),
+})
+
+export const proposalUpdateSchema = proposalCreateSchema.partial().extend({
+  status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'EXPIRED']).optional(),
+})
+
+export const proposalApprovalSchema = z.object({
+  status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'EXPIRED']),
+  notes: z.string().max(2000, 'Notlar 2000 karakteri aşamaz').optional(),
+})
+
+export type ProposalCreate = z.infer<typeof proposalCreateSchema>
+export type ProposalUpdate = z.infer<typeof proposalUpdateSchema>
+export type ProposalApproval = z.infer<typeof proposalApprovalSchema>

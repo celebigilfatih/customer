@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { routes } from '@/lib/routes';
 
 interface User {
   id: string;
@@ -102,7 +103,7 @@ export default function UsersPage() {
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Kullanıcı Yönetimi</h1>
         <button
-          onClick={() => router.push('/users/add')}
+          onClick={() => router.push(routes.users.add)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
         >
           Yeni Kullanıcı Ekle
@@ -161,7 +162,7 @@ export default function UsersPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                   <button
-                    onClick={() => router.push(`/users/${user.id}/edit`)}
+                    onClick={() => router.push(routes.users.edit(user.id))}
                     className="text-blue-600 hover:text-blue-900"
                   >
                     Düzenle
