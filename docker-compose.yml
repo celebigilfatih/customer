@@ -1,37 +1,57 @@
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: musteri_takip_db
+    container_name: omt-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: musteri_takip
+      POSTGRES_DB: omt_tournament
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: postgres123
     ports:
       - "5451:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    networks:
+      - omt-network
 
+  # Next.js Application
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: musteri_takip_app
+    container_name: omt-app
     restart: unless-stopped
+<<<<<<< HEAD
     ports:
       - "3052:3000"
+=======
+>>>>>>> 3e3797c3baed7fa069b92dfdf0f0b4f0ac8fc26d
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/musteri_takip
+      DATABASE_URL: "postgresql://postgres:postgres123@postgres:5432/omt_tournament"
+      NEXTAUTH_SECRET: "your-secret-key-here"
+      NEXTAUTH_URL: "http://localhost:3000"
+    ports:
+      - "3001:3000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+    volumes:
+      - ./public/uploads:/app/public/uploads
+    networks:
+      - omt-network
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        node server.js
+      "
 
 
 volumes:
   postgres_data:
+<<<<<<< HEAD
+=======
+
+networks:
+  omt-network:
+    driver: bridge
+>>>>>>> 3e3797c3baed7fa069b92dfdf0f0b4f0ac8fc26d

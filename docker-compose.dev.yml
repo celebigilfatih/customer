@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database for Development
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: omt-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: omt_tournament_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - omt-dev-network
+
+  # Development App (with hot reload)
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: omt-app-dev
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres123@postgres-dev:5432/omt_tournament_dev"
+      NEXTAUTH_SECRET: "dev-secret-key"
+      NEXTAUTH_URL: "http://localhost:3001"
+    ports:
+      - "3001:3000"
+    depends_on:
+      - postgres-dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./public/uploads:/app/public/uploads
+    networks:
+      - omt-dev-network
+
+volumes:
+  postgres_dev_data:
+
+networks:
+  omt-dev-network:
+    driver: bridge
