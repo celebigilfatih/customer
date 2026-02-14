@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     const created = await prisma.payment.create({
       data: {
         ...validated,
+        date: new Date(validated.dueDate),
         dueDate: new Date(validated.dueDate),
         paidDate: validated.paidDate ? new Date(validated.paidDate) : undefined,
         status: validated.status as PaymentStatus,

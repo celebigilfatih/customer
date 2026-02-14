@@ -24,7 +24,7 @@ interface CustomerFormProps {
 
 export function CustomerForm({ customer, onSubmit, onSuccess, onCancel, embedded = false }: CustomerFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [cities, setCities] = useState<string[]>([])
+  const [cities, setCities] = useState<{id: number, name: string}[]>([])
   
   const form = useForm({
     resolver: zodResolver(customerCreateSchema),

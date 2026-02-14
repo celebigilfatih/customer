@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { proposalCreateSchema } from '@/lib/validations'
+import { ProposalType } from '@/generated/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
         customerId: validated.customerId,
         number: proposalNumber,
         title: validated.title,
-        type: validated.type,
+        type: validated.type as ProposalType,
         description: validated.description,
         amount: validated.amount,
         currency: validated.currency,

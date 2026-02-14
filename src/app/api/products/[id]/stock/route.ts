@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { Decimal } from "@prisma/client/runtime/library";
 
 const stockAdjustmentSchema = z.object({
   quantity: z.number(),
@@ -41,7 +42,7 @@ export async function POST(
         );
       }
     } else if (validatedData.type === "ADJUSTMENT") {
-      newQuantity = validatedData.quantity;
+      newQuantity = new Decimal(validatedData.quantity);
     }
 
     // Transaction ile stok güncelleme ve hareket kaydı

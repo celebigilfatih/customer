@@ -197,6 +197,8 @@ export const proposalItemSchema = z.object({
   totalPrice: z.string().regex(/^[0-9]+$/, 'Toplam fiyat sayı olmalıdır'),
 })
 
+export type ProposalItem = z.infer<typeof proposalItemSchema>
+
 const proposalBaseSchema = z.object({
   customerId: z.string().min(1, 'Müşteri seçilmelidir'),
   title: z.string().min(2, 'Başlık en az 2 karakter').max(200, 'Başlık 200 karakteri aşamaz'),

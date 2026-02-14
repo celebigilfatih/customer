@@ -22,17 +22,12 @@ services:
       dockerfile: Dockerfile
     container_name: omt-app
     restart: unless-stopped
-<<<<<<< HEAD
-    ports:
-      - "3052:3000"
-=======
->>>>>>> 3e3797c3baed7fa069b92dfdf0f0b4f0ac8fc26d
     environment:
       DATABASE_URL: "postgresql://postgres:postgres123@postgres:5432/omt_tournament"
       NEXTAUTH_SECRET: "your-secret-key-here"
       NEXTAUTH_URL: "http://localhost:3000"
     ports:
-      - "3001:3000"
+      - "3002:3000"
     depends_on:
       - postgres
     volumes:
@@ -45,13 +40,9 @@ services:
         node server.js
       "
 
-
 volumes:
   postgres_data:
-<<<<<<< HEAD
-=======
 
 networks:
   omt-network:
     driver: bridge
->>>>>>> 3e3797c3baed7fa069b92dfdf0f0b4f0ac8fc26d
