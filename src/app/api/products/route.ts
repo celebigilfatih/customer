@@ -6,9 +6,11 @@ const productSchema = z.object({
   code: z.string().min(1, "Ürün kodu gereklidir"),
   name: z.string().min(1, "Ürün adı gereklidir"),
   description: z.string().optional(),
-  groupId: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
+  groupId: z.string().optional(),
   stockQuantity: z.number().default(0),
   minStockLevel: z.number().default(0),
+  costPrice: z.number().optional(),
+  profitMargin: z.number().optional(),
   unitPrice: z.number().positive("Birim fiyat pozitif olmalıdır"),
   currency: z.string().default("TRY"),
 });

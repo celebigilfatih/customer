@@ -567,7 +567,9 @@ model Product {
   minStockLevel Decimal @default(0)
   
   // Fiyat
-  unitPrice   Decimal
+  costPrice   Decimal? // Maliyet fiyatı
+  profitMargin Decimal? @default(0) // Kar marjı yüzdesi
+  unitPrice   Decimal // Satış fiyatı
   currency    String   @default("TRY")
   
   // Stok hareketleri

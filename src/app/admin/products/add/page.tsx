@@ -34,9 +34,26 @@ export default function AddProductPage() {
     groupId: "",
     stockQuantity: "0",
     minStockLevel: "0",
+    costPrice: "",
+    profitMargin: "0",
     unitPrice: "",
     currency: "TRY",
   });
+
+  // Satış fiyatını otomatik hesapla
+  useEffect(() => {
+    if (formData.costPrice && formData.profitMargin) {
+      const cost = parseFloat(formData.costPrice);
+      const margin = parseFloat(formData.profitMargin);
+      if (!isNaN(cost) && !isNaN(margin)) {
+        const calculatedPrice = cost * (1 + margin / 100);
+        setFormData(prev => ({
+          ...prev,
+          unitPrice: calculatedPrice.toFixed(2)
+        }));
+      }
+    }
+  }, [formData.costPrice, formData.profitMargin]);
 
   useEffect(() => {
     fetchGroups();
@@ -67,6 +84,8 @@ export default function AddProductPage() {
           groupId: formData.groupId || undefined,
           stockQuantity: parseFloat(formData.stockQuantity),
           minStockLevel: parseFloat(formData.minStockLevel),
+          costPrice: formData.costPrice ? parseFloat(formData.costPrice) : undefined,
+          profitMargin: formData.profitMargin ? parseFloat(formData.profitMargin) : undefined,
           unitPrice: parseFloat(formData.unitPrice),
         }),
       });
@@ -198,9 +217,41 @@ export default function AddProductPage() {
                   }
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="costPrice">Maliyet Fiyatı</Label>
+                <Input
+                  id="costPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.costPrice}
+                  onChange={(e) =>
+                    setFormData({ ...formData, costPrice: e.target.value })
+                  }
+                  placeholder="0.00"
+                />
+              </div>
 
               <div className="space-y-2">
-                <Label htmlFor="unitPrice">Birim Fiyat *</Label>
+                <Label htmlFor="profitMargin">Kar Marjı (%)</Label>
+                <Input
+                  id="profitMargin"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.profitMargin}
+                  onChange={(e) =>
+                    setFormData({ ...formData, profitMargin: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="unitPrice">Satış Fiyatı *</Label>
                 <Input
                   id="unitPrice"
                   type="number"
@@ -213,6 +264,9 @@ export default function AddProductPage() {
                   placeholder="0.00"
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  Maliyet + Kar marjından otomatik hesaplanır
+                </p>
               </div>
             </div>
 
