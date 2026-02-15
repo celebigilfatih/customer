@@ -153,8 +153,8 @@ export function CustomerForm({ customer, onSubmit, onSuccess, onCancel, embedded
                       </FormControl>
                       <SelectContent>
                         {cities.map((city) => (
-                          <SelectItem key={city} value={city}>
-                            {city}
+                          <SelectItem key={city.id} value={city.name}>
+                            {city.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
