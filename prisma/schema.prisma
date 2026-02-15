@@ -18,46 +18,6 @@ enum ApplicationStatus {
   REJECTED
 }
 
-<<<<<<< HEAD
-model Customer {
-  id                   String         @id @default(cuid())
-  fullName            String
-  phoneNumber         String
-  city                String
-  district            String
-  club                String
-  sportsSchoolOfficial String
-  hosting             String
-  duration            String
-  startDate           String
-  endDate             String
-  offer               String
-  address             String
-  status              CustomerStatus @default(POTENTIAL)
-  price               String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  notes               Note[]
-  userAccounts        User[]
-  subscriptions       Subscription[]
-  domains             Domain[]
-  hostings            Hosting[]
-  tasks               Task[]
-  payments            Payment[]
-  notifications       Notification[]
-  files               File[]
-  proposals           Proposal[]
-  
-  // YENİ: Muhasebe ilişkileri
-  accountTransactions AccountTransaction[]
-  invoices            Invoice[]
-  
-  // YENİ: Açılış bakiyesi
-  openingBalance      Decimal        @default(0)
-  openingBalanceDate  DateTime?
-
-  @@map("customers")
-=======
 // Yaş grupları için enum
 enum AgeGroup {
   Y2012
@@ -71,7 +31,6 @@ enum AgeGroup {
   Y2020
   Y2021
   Y2022
->>>>>>> 3e3797c3baed7fa069b92dfdf0f0b4f0ac8fc26d
 }
 
 // Etap bilgileri için enum
@@ -124,6 +83,60 @@ model Team {
   @@map("teams")
 }
 
+enum Role {
+  ADMIN
+  SUPPORT
+  CUSTOMER
+}
+
+// Müşteri modeli
+model Customer {
+  id                   String         @id @default(cuid())
+  fullName            String
+  phoneNumber         String
+  city                String
+  district            String
+  club                String
+  sportsSchoolOfficial String
+  hosting             String
+  duration            String
+  startDate           String
+  endDate             String
+  offer               String
+  address             String
+  status              CustomerStatus @default(POTENTIAL)
+  price               String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  notes               Note[]
+  userAccounts        User[]
+  subscriptions       Subscription[]
+  domains             Domain[]
+  hostings            Hosting[]
+  tasks               Task[]
+  payments            Payment[]
+  notifications       Notification[]
+  files               File[]
+  proposals           Proposal[]
+  
+  // YENİ: Muhasebe ilişkileri
+  accountTransactions AccountTransaction[]
+  invoices            Invoice[]
+  
+  // YENİ: Açılış bakiyesi
+  openingBalance      Decimal        @default(0)
+  openingBalanceDate  DateTime?
+
+  @@map("customers")
+}
+
+enum CustomerStatus {
+  POTENTIAL
+  ACTIVE
+  INACTIVE
+  LOST
+}
+
 // Yönetici kullanıcıları tablosu
 model Admin {
   id        String   @id @default(cuid())
@@ -133,11 +146,7 @@ model Admin {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   role      Role     @default(SUPPORT)
-  customer  Customer? @relation(fields: [customerId], references: [id])
   customerId String?
-
-  tasks     Task[]
-  comments  TaskComment[]
 
   @@map("admins")
 }
@@ -154,12 +163,6 @@ model Settings {
   updatedAt            DateTime @updatedAt
 
   @@map("settings")
-}
-
-enum Role {
-  ADMIN
-  SUPPORT
-  CUSTOMER
 }
 
 enum SubscriptionType {
@@ -283,6 +286,12 @@ enum PaymentStatus {
   PAID
 }
 
+enum PaymentType {
+  CASH        // Nakit
+  TRANSFER    // Havale/EFT
+  CREDIT_CARD // Kredi kartı
+}
+
 model Payment {
   id            String   @id @default(cuid())
   customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -321,13 +330,6 @@ model Payment {
   updatedAt     DateTime @updatedAt
 
   @@map("payments")
-}
-
-// YENİ: Ödeme türü enum
-enum PaymentType {
-  CASH        // Nakit
-  TRANSFER    // Havale/EFT
-  CREDIT_CARD // Kredi kartı
 }
 
 enum NotificationType {
@@ -488,18 +490,6 @@ model Proposal {
   updatedAt   DateTime      @updatedAt
 
   @@map("proposals")
-}
-
-model Setting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  type      String   @default("string")
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("settings")
 }
 
 // ============================================
@@ -717,4 +707,34 @@ model InvoiceItem {
   totalPrice  Decimal
   
   @@map("invoice_items")
+}
+
+// User modeli (eksik olması muhtemel)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  customerId  String?
+  
+  assignedTasks Task[]
+  comments      TaskComment[]
+
+  @@map("users")
+}
+
+// Note modeli (eksik olması muhtemel)
+model Note {
+  id        String   @id @default(cuid())
+  content   String
+  customer  Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
 }

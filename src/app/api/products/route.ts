@@ -6,7 +6,7 @@ const productSchema = z.object({
   code: z.string().min(1, "Ürün kodu gereklidir"),
   name: z.string().min(1, "Ürün adı gereklidir"),
   description: z.string().optional(),
-  groupId: z.string().optional(),
+  groupId: z.string().optional().transform((val) => val ? parseInt(val, 10) : undefined),
   stockQuantity: z.number().default(0),
   minStockLevel: z.number().default(0),
   unitPrice: z.number().positive("Birim fiyat pozitif olmalıdır"),
@@ -38,12 +38,6 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       include: {
         group: true,
-        _count: {
-          select: {
-            proposalItems: true,
-            invoiceItems: true,
-          },
-        },
       },
     });
 
