@@ -444,28 +444,6 @@ export function SubscriptionForm({ onSubmit, onSuccess, onCancel, embedded = fal
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="proposalType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teklif Türü</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
-                      <SelectTrigger aria-required="true">
-                        <SelectValue placeholder="Teklif türü seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {proposalTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.name}>{type.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
             </div>
 
             <div className="flex justify-end gap-2">
