@@ -209,21 +209,11 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
   }
 
   return (
-    <div className="space-y-6">
-      {/* Basic Info Section */}
-      <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
-        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <CardTitle className="text-base">Temel Bilgiler</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <Card>
+      <CardContent className="pt-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="customerId"
@@ -274,21 +264,21 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Başlık</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Örn: Web Sitesi Geliştirme Teklifi" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Başlık</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Örn: Web Sitesi Geliştirme Teklifi" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -473,6 +463,5 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
         </Form>
       </CardContent>
     </Card>
-    </div>
   )
 }
