@@ -213,9 +213,8 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
       <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="md:w-[200px]">
-                <FormField
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
                   control={form.control}
                   name="customerId"
                 render={({ field }) => (
@@ -235,9 +234,7 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                   </FormItem>
                 )}
               />
-              </div>
 
-              <div className="md:w-[160px]">
               <FormField
                 control={form.control}
                 name="type"
@@ -267,9 +264,7 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                   </FormItem>
                 )}
               />
-              </div>
 
-              <div className="flex-1">
               <FormField
                 control={form.control}
                 name="title"
@@ -283,7 +278,6 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                 </FormItem>
               )}
             />
-              </div>
             </div>
 
             <FormField
