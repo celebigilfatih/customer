@@ -21,18 +21,16 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto py-8 px-4">
-        <div className="mb-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Müşteriler</h1>
-        </div>
-
-        <CustomerList
-          onAddCustomer={handleAddCustomer}
-          onEditCustomer={handleEditCustomer}
-          onViewCustomer={handleViewCustomer}
-        />
+    <div className="p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Müşteriler</h1>
       </div>
+
+      <CustomerList
+        onAddCustomer={handleAddCustomer}
+        onEditCustomer={handleEditCustomer}
+        onViewCustomer={handleViewCustomer}
+      />
     </div>
   )
 }

@@ -19,28 +19,26 @@ export default function AddCustomerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto py-8 px-4">
-        <div className="mb-8">
-          <div className="grid grid-cols-4 gap-4 items-center mb-4">
-            <BackButton size="sm" fallbackHref={routes.customers.list} className="hover:bg-gray-100" />
-            <div className="col-span-3">
-              <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-2">
-                Yeni Müşteri Ekle
-              </h1>
-              <p className="text-muted-foreground text-lg">
-                Yeni müşteri bilgilerini girin
-              </p>
-            </div>
+    <div className="p-6">
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <BackButton size="sm" fallbackHref={routes.customers.list} />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Yeni Müşteri Ekle
+            </h1>
+            <p className="text-muted-foreground">
+              Yeni müşteri bilgilerini girin
+            </p>
           </div>
         </div>
-
-        <CustomerForm 
-          embedded
-          onSuccess={handleSuccess}
-          onCancel={handleCancel}
-        />
       </div>
+
+      <CustomerForm 
+        embedded
+        onSuccess={handleSuccess}
+        onCancel={handleCancel}
+      />
     </div>
   )
 }
