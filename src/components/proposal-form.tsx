@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { proposalCreateSchema, type ProposalCreate, type ProposalItem as ProposalItemType } from "@/lib/validations"
 import { toast } from "sonner"
 import { getProposalTypes } from "@/lib/settings-client"
-import { Plus, Trash2, Package, FileText } from "lucide-react"
+import { Plus, Trash2, Package } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -209,19 +209,16 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      {/* Basic Information Card */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            Temel Bilgiler
-          </CardTitle>
+    <Card className={embedded ? "border" : "w-full max-w-4xl mx-auto"}>
+      {embedded ? null : (
+        <CardHeader>
+          <CardTitle>Yeni Teklif</CardTitle>
         </CardHeader>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      )}
+      <CardContent className={embedded ? "p-6" : undefined}>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="customerId"
@@ -471,6 +468,5 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
         </Form>
       </CardContent>
     </Card>
-    </div>
   )
 }
