@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const setting = await prisma.settings.findUnique({ where: { id } })
+    const setting = await prisma.setting.findUnique({ where: { id } })
 
     if (!setting) {
       return NextResponse.json({ error: 'Ayar bulunamadı' }, { status: 404 })
@@ -33,7 +33,7 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    const setting = await prisma.settings.update({
+    const setting = await prisma.setting.update({
       where: { id },
       data: {
         ...(body.key !== undefined && { key: body.key }),
@@ -63,7 +63,7 @@ export async function DELETE(
     const { id } = await params
     
     // Soft delete
-    await prisma.settings.update({
+    await prisma.setting.update({
       where: { id },
       data: { isActive: false },
     })

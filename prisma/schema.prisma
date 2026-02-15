@@ -165,6 +165,19 @@ model Settings {
   @@map("settings")
 }
 
+// Key-value ayarlar için Setting modeli
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
 enum SubscriptionType {
   SOFTWARE_RENTAL
   CUSTOM_PROJECT
