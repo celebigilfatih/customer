@@ -213,7 +213,7 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
       <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-4">
-            <div className="flex flex-col md:flex-row md:items-end gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                   control={form.control}
                   name="customerId"
