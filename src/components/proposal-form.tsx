@@ -213,10 +213,11 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
       <CardContent className="pt-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="customerId"
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="md:w-[200px]">
+                <FormField
+                  control={form.control}
+                  name="customerId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Müşteri</FormLabel>
@@ -234,7 +235,9 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                   </FormItem>
                 )}
               />
+              </div>
 
+              <div className="md:w-[160px]">
               <FormField
                 control={form.control}
                 name="type"
@@ -264,11 +267,12 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                   </FormItem>
                 )}
               />
-            </div>
+              </div>
 
-            <FormField
-              control={form.control}
-              name="title"
+              <div className="flex-1">
+              <FormField
+                control={form.control}
+                name="title"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Başlık</FormLabel>
@@ -279,6 +283,8 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                 </FormItem>
               )}
             />
+              </div>
+            </div>
 
             <FormField
               control={form.control}
