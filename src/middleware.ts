@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const RATE_LIMIT_WINDOW_MS = 10000
-const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_WINDOW_MS = 60000 // 1 minute
+const RATE_LIMIT_MAX = 100 // 100 requests per minute
 declare global { var __rateStore: Map<string, number[]> | undefined }
 const rateStore = globalThis.__rateStore || (globalThis.__rateStore = new Map<string, number[]>())
 

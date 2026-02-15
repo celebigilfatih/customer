@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
     let settings
     if (key) {
-      settings = await prisma.setting.findMany({
+      settings = await prisma.settings.findMany({
         where: { 
           key: { contains: key },
           isActive: true 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
         orderBy: { key: 'asc' },
       })
     } else {
-      settings = await prisma.setting.findMany({
+      settings = await prisma.settings.findMany({
         where: { isActive: true },
         orderBy: { key: 'asc' },
       })
@@ -44,12 +44,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if key already exists
-    const existing = await prisma.setting.findUnique({ where: { key: body.key } })
+    const existing = await prisma.settings.findUnique({ where: { key: body.key } })
     if (existing) {
       return NextResponse.json({ error: 'Bu ayar anahtarı zaten mevcut' }, { status: 400 })
     }
 
-    const setting = await prisma.setting.create({
+    const setting = await prisma.settings.create({
       data: {
         key: body.key,
         value: body.value,

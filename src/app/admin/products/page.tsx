@@ -48,7 +48,7 @@ interface Product {
   currency: string;
   isActive: boolean;
   createdAt: string;
-  _count: {
+  _count?: {
     proposalItems: number;
     invoiceItems: number;
   };
@@ -262,8 +262,8 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>Teklif: {product._count.proposalItems}</div>
-                        <div>Fatura: {product._count.invoiceItems}</div>
+                        <div>Teklif: {product._count?.proposalItems || 0}</div>
+                        <div>Fatura: {product._count?.invoiceItems || 0}</div>
                       </div>
                     </TableCell>
                     <TableCell>
