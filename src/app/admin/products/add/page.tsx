@@ -147,7 +147,7 @@ export default function AddProductPage() {
                   <SelectValue placeholder="Grup seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Gruplansız</SelectItem>
+                  <SelectItem value="null">Gruplansız</SelectItem>
                   {groups.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       {group.name}
