@@ -269,21 +269,21 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                   </FormItem>
                 )}
               />
-            </div>
 
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Başlık</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Örn: Web Sitesi Geliştirme Teklifi" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Başlık</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Örn: Web Sitesi Geliştirme Teklifi" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
