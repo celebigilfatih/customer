@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { proposalCreateSchema, type ProposalCreate, type ProposalItem as ProposalItemType } from "@/lib/validations"
 import { toast } from "sonner"
 import { getProposalTypes } from "@/lib/settings-client"
-import { Plus, Trash2, Package } from "lucide-react"
+import { Plus, Trash2, Package, User, FileText, DollarSign, Calendar } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -209,16 +209,21 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
   }
 
   return (
-    <Card className={embedded ? "border" : "w-full max-w-4xl mx-auto"}>
-      {embedded ? null : (
-        <CardHeader>
-          <CardTitle>Yeni Teklif</CardTitle>
+    <div className="space-y-6">
+      {/* Basic Info Section */}
+      <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <CardTitle className="text-base">Temel Bilgiler</CardTitle>
+          </div>
         </CardHeader>
-      )}
-      <CardContent className={embedded ? "p-6" : undefined}>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="pt-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField
                 control={form.control}
                 name="customerId"
@@ -468,5 +473,6 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
         </Form>
       </CardContent>
     </Card>
+    </div>
   )
 }
