@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { hostingCreateSchema, type HostingCreate } from "@/lib/validations"
 import { toast } from "sonner"
 
-type SimpleCustomer = { id: string; fullName: string }
+type SimpleCustomer = { id: string; fullName: string; club?: string }
 
 interface HostingFormProps {
   onSubmit?: (data: HostingCreate) => Promise<void>
@@ -45,7 +45,7 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
         const res = await fetch(`/api/customers?limit=100`)
         if (!res.ok) return
         const data = await res.json()
-        const items = (data.data || []).map((c: { id: string; fullName: string }) => ({ id: c.id, fullName: c.fullName }))
+        const items = (data.data || []).map((c: any) => ({ id: c.id, fullName: c.fullName, club: c.club }))
         setCustomers(items)
       } catch {}
     }
@@ -91,7 +91,7 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Müşteri</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Müşteri seçin" />
@@ -99,7 +99,7 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
                       </FormControl>
                       <SelectContent>
                         {customers.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.fullName}</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.club || c.fullName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
