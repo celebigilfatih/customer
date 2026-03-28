@@ -30,6 +30,7 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
       customerId: "",
       name: "",
       registrar: "",
+      firmaAdi: "",
       registerDate: "",
       renewDate: "",
       whoisNote: undefined,
@@ -126,6 +127,20 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
                     <FormLabel>Registrar</FormLabel>
                     <FormControl>
                       <Input placeholder="Firma adı" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="firmaAdi"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Firma Adı</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Domain sahibi firma" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

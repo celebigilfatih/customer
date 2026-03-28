@@ -228,6 +228,7 @@ model Domain {
   customerId   String
   name         String   @unique
   registrar    String
+  firmaAdi     String?
   registerDate DateTime
   renewDate    DateTime
   whoisNote    String?

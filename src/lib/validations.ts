@@ -137,6 +137,7 @@ export const domainCreateSchema = z.object({
   customerId: z.string().min(1),
   name: z.string().min(3).max(253),
   registrar: z.string().min(2).max(100),
+  firmaAdi: z.string().min(2).max(200).optional(),
   registerDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   renewDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   whoisNote: z.string().max(1000).optional(),
