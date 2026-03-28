@@ -88,7 +88,7 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Müşteri</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
                       <SelectTrigger>
                         <SelectValue placeholder="Müşteri seçin" />
                       </SelectTrigger>

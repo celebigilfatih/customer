@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
     const sanitized = {
       ...body,
       name: sanitizeInput(body.name),
-      registrar: sanitizeInput(body.registrar),
       whoisNote: body.whoisNote ? sanitizeInput(body.whoisNote) : undefined,
     }
     const validated = domainCreateSchema.parse(sanitized)
