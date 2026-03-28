@@ -93,6 +93,7 @@ enum Role {
 model Customer {
   id                   String         @id @default(cuid())
   fullName            String
+  firmaAdi            String?
   phoneNumber         String
   city                String
   district            String
@@ -227,8 +228,6 @@ model Domain {
   customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId   String
   name         String   @unique
-  registrar    String
-  firmaAdi     String?
   registerDate DateTime
   renewDate    DateTime
   whoisNote    String?

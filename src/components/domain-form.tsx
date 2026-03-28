@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { domainCreateSchema, type DomainCreate } from "@/lib/validations"
 import { toast } from "sonner"
 
-type SimpleCustomer = { id: string; fullName: string }
+type SimpleCustomer = { id: string; fullName: string; firmaAdi?: string }
 
 interface DomainFormProps {
   onSubmit?: (data: DomainCreate) => Promise<void>
@@ -29,8 +29,6 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
     defaultValues: {
       customerId: "",
       name: "",
-      registrar: "",
-      firmaAdi: "",
       registerDate: "",
       renewDate: "",
       whoisNote: undefined,
@@ -44,7 +42,7 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
         const res = await fetch(`/api/customers?limit=100`)
         if (!res.ok) return
         const data = await res.json()
-        const items = (data.data || []).map((c: { id: string; fullName: string }) => ({ id: c.id, fullName: c.fullName }))
+        const items = (data.data || []).map((c: any) => ({ id: c.id, fullName: c.fullName, firmaAdi: c.firmaAdi }))
         setCustomers(items)
       } catch {}
     }
@@ -96,7 +94,7 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
                       </SelectTrigger>
                       <SelectContent>
                         {customers.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.fullName}</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.firmaAdi || c.fullName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -113,34 +111,6 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
                     <FormLabel>Domain</FormLabel>
                     <FormControl>
                       <Input placeholder="example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="registrar"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Registrar</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Firma adı" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="firmaAdi"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Firma Adı</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Domain sahibi firma" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

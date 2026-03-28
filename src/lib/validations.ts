@@ -5,6 +5,10 @@ export const customerCreateSchema = z.object({
   fullName: z.string()
     .min(2, "Ad soyad en az 2 karakter olmalıdır")
     .max(100, "Ad soyad 100 karakterden az olmalıdır"),
+  firmaAdi: z.string()
+    .min(2, "Firma adı en az 2 karakter olmalıdır")
+    .max(100, "Firma adı 100 karakterden az olmalıdır")
+    .optional(),
   
   phoneNumber: z.string()
     .regex(/^[0-9+\-\s()]+$/, "Geçersiz telefon numarası formatı")
@@ -136,8 +140,6 @@ export const subscriptionUpdateSchema = subscriptionBaseSchema.partial().refine(
 export const domainCreateSchema = z.object({
   customerId: z.string().min(1),
   name: z.string().min(3).max(253),
-  registrar: z.string().min(2).max(100),
-  firmaAdi: z.string().min(2).max(200).optional(),
   registerDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   renewDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   whoisNote: z.string().max(1000).optional(),
