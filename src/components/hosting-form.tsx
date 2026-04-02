@@ -6,8 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { hostingCreateSchema, type HostingCreate } from "@/lib/validations"
 import { toast } from "sonner"
 
@@ -28,12 +28,7 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
     resolver: zodResolver(hostingCreateSchema),
     defaultValues: {
       customerId: "",
-      package: "",
-      server: "",
-      ip: "",
-      panelUrl: undefined,
-      panelUser: undefined,
-      panelPass: undefined,
+      name: "",
       endDate: "",
       notes: undefined,
     } as HostingCreate,
@@ -92,11 +87,9 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
                   <FormItem>
                     <FormLabel>Müşteri</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || ""}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Müşteri seçin" />
-                        </SelectTrigger>
-                      </FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Müşteri seçin" />
+                      </SelectTrigger>
                       <SelectContent>
                         {customers.map((c) => (
                           <SelectItem key={c.id} value={c.id}>{c.club || c.fullName}</SelectItem>
@@ -110,82 +103,12 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
 
               <FormField
                 control={form.control}
-                name="package"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Paket</FormLabel>
+                    <FormLabel>Alan Adı</FormLabel>
                     <FormControl>
-                      <Input placeholder="Paket adı" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="server"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sunucu</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Sunucu adı" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="ip"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>IP</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0.0.0.0" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="panelUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Panel URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="panelUser"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Panel Kullanıcı</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Kullanıcı adı" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="panelPass"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Panel Şifre</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Şifre" {...field} />
+                      <Input placeholder="example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -197,7 +120,7 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
                 name="endDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Bitiş</FormLabel>
+                    <FormLabel>Bitiş Tarihi</FormLabel>
                     <FormControl>
                       <Input placeholder="YYYY-MM-DD" {...field} />
                     </FormControl>

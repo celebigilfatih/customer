@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     const where = {
       AND: [
-        search ? { package: { contains: search, mode: 'insensitive' as const } } : {},
+        search ? { name: { contains: search, mode: 'insensitive' as const } } : {},
         customerId ? { customerId } : {},
       ].filter((c) => Object.keys(c).length > 0),
     }
@@ -46,12 +46,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const sanitized = {
       ...body,
-      package: sanitizeInput(body.package),
-      server: sanitizeInput(body.server),
-      ip: sanitizeInput(body.ip),
-      panelUrl: body.panelUrl ? sanitizeInput(body.panelUrl) : undefined,
-      panelUser: body.panelUser ? sanitizeInput(body.panelUser) : undefined,
-      panelPass: body.panelPass ? sanitizeInput(body.panelPass) : undefined,
+      name: sanitizeInput(body.name),
       notes: body.notes ? sanitizeInput(body.notes) : undefined,
     }
     const validated = hostingCreateSchema.parse(sanitized)

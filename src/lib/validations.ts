@@ -149,12 +149,7 @@ export const domainUpdateSchema = domainCreateSchema.partial()
 
 export const hostingCreateSchema = z.object({
   customerId: z.string().min(1),
-  package: z.string().min(1).max(200),
-  server: z.string().min(1).max(200),
-  ip: z.string().regex(/^(?:\d{1,3}\.){3}\d{1,3}$/),
-  panelUrl: z.string().url().optional(),
-  panelUser: z.string().optional(),
-  panelPass: z.string().optional(),
+  name: z.string().min(1).max(200),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notes: z.string().max(1000).optional(),
 })

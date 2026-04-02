@@ -243,12 +243,7 @@ model Hosting {
   id         String   @id @default(cuid())
   customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId String
-  package    String
-  server     String
-  ip         String
-  panelUrl   String?
-  panelUser  String?
-  panelPass  String?
+  name       String
   endDate    DateTime
   notes      String?
   createdAt  DateTime @default(now())
