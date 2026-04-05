@@ -70,24 +70,22 @@ export function HostingList({ onAdd }: Props) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Paket</TableHead>
-              <TableHead>Sunucu</TableHead>
-              <TableHead>IP</TableHead>
-              <TableHead>Bitiş</TableHead>
+              <TableHead>Alan Adı</TableHead>
+              <TableHead>Bitiş Tarihi</TableHead>
+              <TableHead>Notlar</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.map((h) => (
               <TableRow key={h.id}>
-                <TableCell>{h.package}</TableCell>
-                <TableCell>{h.server}</TableCell>
-                <TableCell>{h.ip}</TableCell>
+                <TableCell>{(h as any).name}</TableCell>
                 <TableCell>{new Date(h.endDate).toLocaleDateString("tr-TR")}</TableCell>
+                <TableCell>{(h as any).notes || "-"}</TableCell>
               </TableRow>
             ))}
             {items.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-gray-500 py-6">Kayıt bulunamadı</TableCell>
+                <TableCell colSpan={3} className="text-center text-gray-500 py-6">Kayıt bulunamadı</TableCell>
               </TableRow>
             )}
           </TableBody>
