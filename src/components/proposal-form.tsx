@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-type SimpleCustomer = { id: string; fullName: string }
+type SimpleCustomer = { id: string; fullName: string; club?: string }
 type Product = { id: string; name: string; description: string | null; unitPrice: string | number; group?: { name: string } | null }
 
 interface ProposalFormProps {
@@ -90,7 +90,7 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
         const res = await fetch(`/api/customers?limit=100`)
         if (!res.ok) return
         const data = await res.json()
-        const items = (data.data || []).map((c: { id: string; fullName: string }) => ({ id: c.id, fullName: c.fullName }))
+        const items = (data.data || []).map((c: any) => ({ id: c.id, fullName: c.fullName, club: c.club }))
         setCustomers(items)
       } catch {}
     }
@@ -226,7 +226,7 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
                       </SelectTrigger>
                       <SelectContent>
                         {customers.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.fullName}</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.club || c.fullName}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
