@@ -3,16 +3,9 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Hosting } from "@/generated/prisma"
-import { hostingCreateSchema, type HostingCreate } from "@/lib/validations"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
 import { Pencil, Trash2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 
@@ -102,23 +95,6 @@ export function HostingList({ onAdd }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Hostingler</h2>
-        <Button onClick={onAdd}>Yeni Hosting</Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtreler</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <Input placeholder="Ara" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <Button variant="outline" onClick={handleSearch}>Ara</Button>
-          </div>
-        </CardContent>
-      </Card>
-
       <div className="bg-white rounded-lg border overflow-hidden">
         <Table>
           <TableHeader>
@@ -196,24 +172,21 @@ export function HostingList({ onAdd }: Props) {
 
 function HostingEditForm({ hosting, customers, onSuccess }: { hosting: Hosting; customers: SimpleCustomer[]; onSuccess: () => void }) {
   const [isLoading, setIsLoading] = useState(false)
-
-  const form = useForm({
-    resolver: zodResolver(hostingCreateSchema),
-    defaultValues: {
-      customerId: hosting.customerId,
-      name: (hosting as any).name || "",
-      endDate: hosting.endDate ? new Date(hosting.endDate).toISOString().split('T')[0] : "",
-      notes: (hosting as any).notes || "",
-    },
+  const [formData, setFormData] = useState({
+    customerId: hosting.customerId,
+    name: (hosting as any).name || "",
+    endDate: hosting.endDate ? new Date(hosting.endDate).toISOString().split('T')[0] : "",
+    notes: (hosting as any).notes || "",
   })
 
-  const handleSubmit = async (data: HostingCreate) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setIsLoading(true)
     try {
       const res = await fetch(`/api/hosting/${hosting.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       })
       if (!res.ok) throw new Error("Güncelleme başarısız")
       toast.success("Hosting güncellendi")
@@ -226,76 +199,55 @@ function HostingEditForm({ hosting, customers, onSuccess }: { hosting: Hosting; 
   }
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="customerId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Müşteri</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Müşteri seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.club || c.fullName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Müşteri</label>
+        <select
+          value={formData.customerId}
+          onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">Müşteri seçin</option>
+          {customers.map((c) => (
+            <option key={c.id} value={c.id}>{c.club || c.fullName}</option>
+          ))}
+        </select>
+      </div>
 
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Alan Adı</FormLabel>
-              <FormControl>
-                <Input placeholder="example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Alan Adı</label>
+        <input
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          placeholder="example.com"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="endDate"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Bitiş Tarihi</FormLabel>
-              <FormControl>
-                <Input placeholder="YYYY-MM-DD" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Bitiş Tarihi</label>
+        <input
+          value={formData.endDate}
+          onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+          placeholder="YYYY-MM-DD"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
+      </div>
 
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notlar</FormLabel>
-              <FormControl>
-                <Input placeholder="Opsiyonel" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Notlar</label>
+        <input
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          placeholder="Opsiyonel"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
         />
+      </div>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onSuccess()}>İptal</Button>
-          <Button type="submit" disabled={isLoading}>{isLoading ? "Kaydediliyor..." : "Güncelle"}</Button>
-        </DialogFooter>
-      </form>
-    </Form>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={() => onSuccess()}>İptal</Button>
+        <Button type="submit" disabled={isLoading}>{isLoading ? "Kaydediliyor..." : "Güncelle"}</Button>
+      </DialogFooter>
+    </form>
   )
 }
