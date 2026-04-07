@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FolderOpen, Plus, ArrowLeft, Trash2, Tag } from "lucide-react";
+import { FolderOpen, Plus, ArrowLeft, Trash2, Tag, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 interface ProductGroup {
@@ -44,6 +44,8 @@ export default function ProductGroupsPage() {
   const [groups, setGroups] = useState<ProductGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<ProductGroup | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -118,6 +120,39 @@ export default function ProductGroupsPage() {
       }
 
       toast.success("Grup silindi");
+      fetchGroups();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleEdit = (group: ProductGroup) => {
+    setEditingGroup(group);
+    setFormData({
+      name: group.name,
+      description: group.description || "",
+      color: group.color,
+      sortOrder: group.sortOrder,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingGroup) return;
+    try {
+      const response = await fetch(`/api/product-groups/${editingGroup.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Güncelleme başarısız");
+      }
+      toast.success("Grup güncellendi");
+      setEditDialogOpen(false);
+      setEditingGroup(null);
       fetchGroups();
     } catch (error: any) {
       toast.error(error.message);
@@ -257,14 +292,23 @@ export default function ProductGroupsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(group.id)}
-                        disabled={group._count.products > 0}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(group)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(group.id)}
+                          disabled={group._count.products > 0}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -273,6 +317,63 @@ export default function ProductGroupsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Düzenle Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grubu Düzenle</DialogTitle>
+            <DialogDescription>Grup bilgilerini güncelleyin</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Grup Adı *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Örn: Switch"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Açıklama</Label>
+              <Input
+                id="edit-description"
+                value={formData.description}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Grup açıklaması..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Renk</Label>
+              <div className="flex flex-wrap gap-2">
+                {predefinedColors.map((color: string) => (
+                  <div
+                    key={color}
+                    role="button"
+                    className={`w-8 h-8 rounded-full border-2 cursor-pointer ${
+                      formData.color === color
+                        ? "border-gray-900"
+                        : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setFormData({ ...formData, color })}
+                  />
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>İptal</Button>
+              <Button type="submit">Güncelle</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
