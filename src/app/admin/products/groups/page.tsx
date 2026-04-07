@@ -54,16 +54,34 @@ export default function ProductGroupsPage() {
   });
 
   const predefinedColors = [
-    "#3b82f6", // blue
-    "#ef4444", // red
-    "#22c55e", // green
-    "#f59e0b", // yellow
-    "#8b5cf6", // purple
-    "#ec4899", // pink
-    "#06b6d4", // cyan
-    "#f97316", // orange
-    "#6366f1", // indigo
-    "#84cc16", // lime
+    // Red
+    "#B71C1C", "#F44336", "#EF9A9A",
+    // Pink
+    "#880E4F", "#E91E63", "#F48FB1",
+    // Purple
+    "#4A148C", "#9C27B0", "#CE93D8",
+    // Deep Purple
+    "#311B92", "#673AB7", "#B39DDB",
+    // Indigo
+    "#1A237E", "#3F51B5", "#9FA8DA",
+    // Blue
+    "#0D47A1", "#2196F3", "#90CAF9",
+    // Cyan
+    "#006064", "#00BCD4", "#80DEEA",
+    // Teal
+    "#004D40", "#009688", "#80CBC4",
+    // Green
+    "#1B5E20", "#4CAF50", "#A5D6A7",
+    // Lime
+    "#827717", "#CDDC39", "#E6EE9C",
+    // Yellow
+    "#F57F17", "#FFC107", "#FFE082",
+    // Orange
+    "#E65100", "#FF9800", "#FFCC80",
+    // Brown
+    "#3E2723", "#795548", "#BCAAA4",
+    // Grey
+    "#212121", "#607D8B", "#B0BEC5",
   ];
 
   useEffect(() => {

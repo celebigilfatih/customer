@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { BackButton } from "@/components/back-button";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface Transaction {
@@ -44,6 +45,7 @@ export default function CustomerTransactionsPage() {
 
   const [customer, setCustomer] = useState<CustomerInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [summary, setSummary] = useState<{ totalDebit: number; totalCredit: number; balance: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function CustomerTransactionsPage() {
         currentBalance: data.summary.balance.toString(),
       });
       setTransactions(data.transactions || []);
+      setSummary(data.summary);
     } catch (error) {
       toast.error("Veriler yüklenirken hata oluştu");
     } finally {
@@ -92,8 +95,17 @@ export default function CustomerTransactionsPage() {
       <BackButton fallbackHref="/admin/accounting/customers" />
 
       <PageHeader
-        title="Cari İşlemler"
+        title="Cari Hareketler"
         description={customer?.fullName || "Müşteri işlemleri"}
+        actions={
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/admin/accounting/customers/${customerId}`)}
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            Detay
+          </Button>
+        }
       />
 
       {customer && (
