@@ -52,11 +52,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Prisma files
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # Copy health check script
-COPY --from=builder /app/docker-healthcheck.js ./
+COPY --from=builder --chown=nextjs:nodejs /app/docker-healthcheck.js ./
 
 USER nextjs
 
@@ -69,5 +69,5 @@ ENV HOSTNAME "0.0.0.0"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD node docker-healthcheck.js
 
-# Run the application
-CMD ["node", "server.js"]
+# Run migrations before starting the application.
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

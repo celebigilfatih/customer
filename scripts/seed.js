@@ -41,7 +41,7 @@ async function main() {
         endDate: '2025-07-31',
         offer: '3500',
         address: 'Tunalı Hilmi Cad. No:12 Çankaya/Ankara',
-        status: 'CONTACTED',
+        status: 'ACTIVE',
         price: '3500',
       },
       {
@@ -57,7 +57,7 @@ async function main() {
         endDate: '2027-03-14',
         offer: '12000',
         address: 'Gazi Bulvarı No:45 Konak/İzmir',
-        status: 'INTERESTED',
+        status: 'INACTIVE',
         price: '12000',
       },
     ],

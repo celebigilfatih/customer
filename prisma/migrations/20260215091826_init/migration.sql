@@ -118,12 +118,7 @@ CREATE TABLE "domains" (
 CREATE TABLE "hosting" (
     "id" TEXT NOT NULL,
     "customerId" TEXT NOT NULL,
-    "package" TEXT NOT NULL,
-    "server" TEXT NOT NULL,
-    "ip" TEXT NOT NULL,
-    "panelUrl" TEXT,
-    "panelUser" TEXT,
-    "panelPass" TEXT,
+    "name" TEXT NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

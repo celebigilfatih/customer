@@ -34,12 +34,6 @@ services:
       - ./public/uploads:/app/public/uploads
     networks:
       - omt-network
-    command: >
-      sh -c "
-        npx prisma migrate deploy &&
-        node server.js
-      "
-
 volumes:
   postgres_data:
 

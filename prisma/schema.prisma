@@ -2,7 +2,9 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+  output        = "../src/generated/prisma"
 }
 
 datasource db {
@@ -11,83 +13,129 @@ datasource db {
   directUrl = env("DATABASE_URL")
 }
 
-// Başvuru durumları için enum
-enum ApplicationStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// Yaş grupları için enum
-enum AgeGroup {
-  Y2012
-  Y2013
-  Y2014
-  Y2015
-  Y2016
-  Y2017
-  Y2018
-  Y2019
-  Y2020
-  Y2021
-  Y2022
-}
-
-// Etap bilgileri için enum
-enum Stage {
-  STAGE_1
-  STAGE_2
-}
-
-// Takım başvuruları tablosu
-model TeamApplication {
-  id          String            @id @default(cuid())
-  teamName    String
-  coachName   String
-  phoneNumber String
-  website     String?
-  instagram   String?
-  twitter     String?
-  facebook    String?
-  stage       Stage
-  ageGroups   AgeGroup[]
-  description String?
-  logoUrl     String?
-  status      ApplicationStatus @default(PENDING)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  // Onaylandığında Team tablosuna aktarılır
-  approvedTeam Team?
-
-  @@map("team_applications")
-}
-
-// Kesin katılımcı takımlar tablosu
-model Team {
-  id               String     @id @default(cuid())
-  teamName         String
-  coachName        String
-  phoneNumber      String
-  stage            Stage
-  ageGroups        AgeGroup[]
-  description      String?
-  logoUrl          String?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  
-  // Başvuru ile ilişki (opsiyonel, manuel eklenen takımlar için)
-  applicationId    String?    @unique
-  application      TeamApplication? @relation(fields: [applicationId], references: [id])
-
-  @@map("teams")
-}
+// ============================================
+// ENUMS
+// ============================================
 
 enum Role {
   ADMIN
   SUPPORT
   CUSTOMER
 }
+
+enum CustomerStatus {
+  POTENTIAL
+  ACTIVE
+  INACTIVE
+  LOST
+}
+
+enum SubscriptionType {
+  SOFTWARE_RENTAL
+  CUSTOM_PROJECT
+  MAINTENANCE
+  NEXT_GEN_COACHING
+  AIDAT_TAKIP
+  FOOTBALL_CMS
+  DOMAIN
+  HOSTING
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+enum TaskStatus {
+  OPEN
+  PENDING
+  DONE
+}
+
+enum PaymentStatus {
+  DUE
+  LATE
+  PAID
+}
+
+enum PaymentType {
+  CASH
+  TRANSFER
+  CREDIT_CARD
+}
+
+enum NotificationType {
+  DOMAIN_RENEWAL
+  HOSTING_RENEWAL
+  SUBSCRIPTION_PAYMENT
+  MAINTENANCE_EXPIRY
+  ADMIN_REMINDER
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+enum ProposalType {
+  SUBSCRIPTION
+  PROJECT
+  MAINTENANCE
+  RENEWAL
+  NETWORK
+  HARDWARE
+  SOFTWARE
+  SERVICE
+  CONSULTING
+  OTHER
+}
+
+enum TransactionType {
+  OPENING_BALANCE
+  PROPOSAL_DEBT
+  INVOICE_DEBT
+  PAYMENT_CREDIT
+  MANUAL_ADJUSTMENT
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+enum InvoiceType {
+  SALE
+  RETURN
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+// ============================================
+// MODELS
+// ============================================
 
 // Müşteri modeli
 model Customer {
@@ -120,22 +168,15 @@ model Customer {
   files               File[]
   proposals           Proposal[]
   
-  // YENİ: Muhasebe ilişkileri
+  // Muhasebe ilişkileri
   accountTransactions AccountTransaction[]
   invoices            Invoice[]
   
-  // YENİ: Açılış bakiyesi
+  // Açılış bakiyesi
   openingBalance      Decimal        @default(0)
   openingBalanceDate  DateTime?
 
   @@map("customers")
-}
-
-enum CustomerStatus {
-  POTENTIAL
-  ACTIVE
-  INACTIVE
-  LOST
 }
 
 // Yönetici kullanıcıları tablosu
@@ -152,20 +193,6 @@ model Admin {
   @@map("admins")
 }
 
-// Sistem ayarları tablosu
-model Settings {
-  id                    String  @id @default(cuid())
-  registrationOpen      Boolean @default(true)
-  maxTeamsPerStage      Int     @default(32)
-  allowedAgeGroups      AgeGroup[]
-  availableStages       Stage[]
-  notificationEmail     String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-
-  @@map("settings")
-}
-
 // Key-value ayarlar için Setting modeli
 model Setting {
   id        String   @id @default(cuid())
@@ -177,28 +204,6 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("app_settings")
-}
-
-enum SubscriptionType {
-  SOFTWARE_RENTAL
-  CUSTOM_PROJECT
-  MAINTENANCE
-  NEXT_GEN_COACHING
-  AIDAT_TAKIP
-  FOOTBALL_CMS
-  DOMAIN
-  HOSTING
-}
-
-enum BillingPeriod {
-  MONTHLY
-  YEARLY
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  EXPIRED
-  CANCELED
 }
 
 model Subscription {
@@ -214,7 +219,7 @@ model Subscription {
   status       SubscriptionStatus @default(ACTIVE)
   price        String
   installmentCount Int?
-  proposalType String?           // Added for proposal type association
+  proposalType String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   payments     Payment[]
@@ -253,12 +258,6 @@ model Hosting {
   @@map("hosting")
 }
 
-enum TaskStatus {
-  OPEN
-  PENDING
-  DONE
-}
-
 model Task {
   id          String   @id @default(cuid())
   customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -288,40 +287,28 @@ model TaskComment {
   @@map("task_comments")
 }
 
-enum PaymentStatus {
-  DUE
-  LATE
-  PAID
-}
-
-enum PaymentType {
-  CASH        // Nakit
-  TRANSFER    // Havale/EFT
-  CREDIT_CARD // Kredi kartı
-}
-
 model Payment {
   id            String   @id @default(cuid())
   customer      Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId    String
   
-  // Fatura ilişkisi (YENİ)
+  // Fatura ilişkisi
   invoice       Invoice? @relation(fields: [invoiceId], references: [id])
   invoiceId     String?
   
   subscription  Subscription? @relation(fields: [subscriptionId], references: [id])
   subscriptionId String?
   
-  // YENİ: Ödeme türü
+  // Ödeme türü
   type          PaymentType @default(CASH)
   
-  // Tutar - Decimal olarak değiştirildi
+  // Tutar
   amount        Decimal
   currency      String   @default("TRY")
   
-  // Tarih (YENİ: dueDate yerine date)
+  // Tarih
   date          DateTime
-  dueDate       DateTime? // Geriye uyumluluk için
+  dueDate       DateTime?
   paidDate      DateTime?
   
   // Durum
@@ -329,28 +316,15 @@ model Payment {
   
   // Açıklama
   note          String?
-  description   String? // YENİ
+  description   String?
   
-  // YENİ: Cari hareket ilişkisi
+  // Cari hareket ilişkisi
   accountTransactions AccountTransaction[]
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@map("payments")
-}
-
-enum NotificationType {
-  DOMAIN_RENEWAL
-  HOSTING_RENEWAL
-  SUBSCRIPTION_PAYMENT
-  MAINTENANCE_EXPIRY
-  ADMIN_REMINDER
-}
-
-enum NotificationChannel {
-  EMAIL
-  SMS
 }
 
 model Notification {
@@ -365,22 +339,6 @@ model Notification {
   createdAt    DateTime @default(now())
 
   @@map("notifications")
-}
-
-enum JobType {
-  DAILY_SCAN
-}
-
-model JobSchedule {
-  id        String   @id @default(cuid())
-  type      JobType
-  lastRun   DateTime?
-  nextRun   DateTime?
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("job_schedules")
 }
 
 model File {
@@ -402,55 +360,6 @@ model File {
   createdAt      DateTime      @default(now())
 
   @@map("files")
-}
-
-model WebhookLog {
-  id         String   @id @default(cuid())
-  event      String
-  url        String
-  ok         Boolean
-  statusCode Int?
-  error      String?
-  attempt    Int
-  timestamp  DateTime
-
-  @@map("webhook_logs")
-}
-
-model WebhookQueue {
-  id       String   @id @default(cuid())
-  event    String
-  url      String
-  body     String
-  secret   String?
-  attempt  Int
-  nextAt   DateTime
-  createdAt DateTime @default(now())
-
-  @@map("webhook_queue")
-}
-
-enum ProposalStatus {
-  DRAFT       // Taslak
-  SENT        // Gönderildi
-  PENDING     // Beklemede (görüldü)
-  APPROVED    // Onaylandı
-  REJECTED    // Reddedildi
-  EXPIRED     // Süresi doldu
-  CONVERTED   // Faturaya dönüştürüldü
-}
-
-enum ProposalType {
-  SUBSCRIPTION    // Abonelik
-  PROJECT         // Proje
-  MAINTENANCE     // Bakım Anlaşması
-  RENEWAL         // Yenileme
-  NETWORK         // Network
-  HARDWARE        // Donanım
-  SOFTWARE        // Yazılım
-  SERVICE         // Hizmet
-  CONSULTING      // Danışmanlık
-  OTHER           // Diğer
 }
 
 model Proposal {
@@ -482,16 +391,16 @@ model Proposal {
   
   notes       String?
   
-  // YENİ: Satırlar
+  // Satırlar
   items       ProposalItem[]
   
-  // YENİ: Fatura ilişkisi
+  // Fatura ilişkisi
   invoices    Invoice[]
   
-  // YENİ: Cari hareket
+  // Cari hareket
   accountTransactions AccountTransaction[]
   
-  // YENİ: Stok hareket
+  // Stok hareket
   stockMovements StockMovement[]
   
   createdAt   DateTime      @default(now())
@@ -501,7 +410,7 @@ model Proposal {
 }
 
 // ============================================
-// MUHASEBE MODÜLLERİ - YENİ MODELLER
+// MUHASEBE MODÜLLERİ
 // ============================================
 
 // Cari Hesap Hareketleri
@@ -536,20 +445,12 @@ model AccountTransaction {
   @@map("account_transactions")
 }
 
-enum TransactionType {
-  OPENING_BALANCE   // Açılış bakiyesi
-  PROPOSAL_DEBT     // Teklif borcu
-  INVOICE_DEBT      // Fatura borcu
-  PAYMENT_CREDIT    // Tahsilat
-  MANUAL_ADJUSTMENT // Manuel düzeltme
-}
-
 // Ürün Grubu
 model ProductGroup {
   id          String    @id @default(cuid())
   name        String    @unique
   description String?
-  color       String    @default("#3b82f6") // Varsayılan mavi renk
+  color       String    @default("#3b82f6")
   sortOrder   Int       @default(0)
   isActive    Boolean   @default(true)
   products    Product[]
@@ -575,9 +476,9 @@ model Product {
   minStockLevel Decimal @default(0)
   
   // Fiyat
-  costPrice   Decimal? // Maliyet fiyatı
-  profitMargin Decimal? @default(0) // Kar marjı yüzdesi
-  unitPrice   Decimal // Satış fiyatı
+  costPrice   Decimal?
+  profitMargin Decimal? @default(0)
+  unitPrice   Decimal
   currency    String   @default("TRY")
   
   // Stok hareketleri
@@ -615,12 +516,6 @@ model StockMovement {
   createdAt   DateTime @default(now())
   
   @@map("stock_movements")
-}
-
-enum MovementType {
-  IN          // Giriş
-  OUT         // Çıkış
-  ADJUSTMENT  // Düzeltme
 }
 
 // Teklif Detayları (Satırlar)
@@ -690,19 +585,6 @@ model Invoice {
   @@map("invoices")
 }
 
-enum InvoiceType {
-  SALE      // Satış
-  RETURN    // İade
-}
-
-enum InvoiceStatus {
-  DRAFT     // Taslak
-  ISSUED    // Kesildi
-  PARTIAL   // Kısmen ödendi
-  PAID      // Ödendi
-  CANCELLED // İptal
-}
-
 model InvoiceItem {
   id          String   @id @default(cuid())
   invoiceId   String
@@ -719,7 +601,7 @@ model InvoiceItem {
   @@map("invoice_items")
 }
 
-// User modeli (eksik olması muhtemel)
+// User modeli
 model User {
   id        String   @id @default(cuid())
   username  String   @unique
@@ -740,7 +622,7 @@ model User {
   @@map("users")
 }
 
-// Note modeli (eksik olması muhtemel)
+// Note modeli
 model Note {
   id        String   @id @default(cuid())
   content   String
