@@ -9,6 +9,7 @@ All notable repository changes should be documented here.
 - Fixed Docker production build by aligning runtime Prisma imports with the generated Prisma client path.
 - Fixed Docker standalone runtime startup by including Prisma CLI dependencies and readable Prisma files in the runner image.
 - Fixed Docker healthcheck execution by making the script readable by the runtime user and using IPv4 loopback inside the container.
+- Added `curl` to the production image and changed Docker healthcheck to a Coolify-compatible HTTP health command.
 - Fixed fresh Docker Compose migration flow for the hosting schema by making the early hosting simplification migration safe and aligning the later init migration with the current Prisma model.
 - Moved Prisma migration startup into the Docker image default command so Dockerfile-based Coolify deployments run migrations before starting the app.
 

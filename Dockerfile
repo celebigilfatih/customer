@@ -32,6 +32,8 @@ ENV NODE_ENV=production
 # Uncomment the following line in case you want to disable telemetry during runtime.
 ENV NEXT_TELEMETRY_DISABLED=1
 
+RUN apk add --no-cache curl
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -65,9 +67,9 @@ EXPOSE 3000
 ENV PORT 3000
 ENV HOSTNAME "0.0.0.0"
 
-# Add health check
+# Add health check. Coolify expects curl or wget in Dockerfile-based images.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node docker-healthcheck.js
+  CMD curl -fsS http://127.0.0.1:${PORT:-3000}/api/health || exit 1
 
 # Run migrations before starting the application.
 CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

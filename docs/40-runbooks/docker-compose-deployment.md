@@ -29,6 +29,7 @@ The production image must include:
 - Prisma schema and migrations
 - Prisma CLI runtime dependencies
 - Next.js standalone output
+- `curl` for Dockerfile-based platform healthchecks such as Coolify
 
 Do not rely on runtime package downloads inside the container. The image should contain the dependencies required to run migrations before the server starts.
 
@@ -57,6 +58,7 @@ Recommended Coolify setup:
 - Set `NEXTAUTH_URL` to the public HTTPS URL of the app.
 - Set `NEXTAUTH_SECRET` to a long random secret.
 - Add persistent storage for `/app/public/uploads` if uploads must survive redeploys.
+- Leave Coolify healthcheck enabled; the image contains `curl` and checks `http://127.0.0.1:3000/api/health`.
 
 The image startup command already runs `npx prisma migrate deploy && node server.js`, so Coolify does not need a custom start command for normal deployments.
 
@@ -118,10 +120,12 @@ Cause:
 
 - The healthcheck script may resolve `localhost` to IPv6 `::1` while the app listens on IPv4 `0.0.0.0`.
 - The healthcheck script may not be readable by the non-root runtime user.
+- Dockerfile-based platforms such as Coolify may require `curl` or `wget` to be present in the image.
 
 Resolution:
 
-- Use `127.0.0.1` in the healthcheck script.
+- Use `127.0.0.1` in healthcheck commands.
+- Install `curl` in the runner image.
 - Copy the healthcheck script with `--chown=nextjs:nodejs`.
 
 ### Migration fails on fresh database because a table does not exist
