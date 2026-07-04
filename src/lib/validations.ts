@@ -178,11 +178,11 @@ export const paymentCreateSchema = z.object({
   customerId: z.string().min(1),
   invoiceId: z.string().optional(),
   subscriptionId: z.string().optional(),
-  amount: z.string().regex(/^[0-9]+$/),
+  amount: z.string().regex(/^[0-9]+(\.[0-9]{1,2})?$/),
   currency: z.string().min(1).max(10),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   paidDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  status: z.enum(['DUE', 'LATE', 'PAID']).default('DUE'),
+  status: z.enum(['DUE', 'LATE', 'PAID', 'CANCELLED']).default('DUE'),
   note: z.string().max(1000).optional(),
 })
 export const paymentUpdateSchema = paymentCreateSchema.partial()

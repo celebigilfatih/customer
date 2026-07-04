@@ -1,19 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { paymentCreateSchema, type PaymentCreate } from "@/lib/validations"
-import { AlertCircle } from "lucide-react"
+import {
+  AlertCircle,
+  Banknote,
+  Calendar,
+  CheckCircle2,
+  CircleDollarSign,
+  CreditCard,
+  FileText,
+  User,
+  Wallet,
+} from "lucide-react"
 import { toast } from "sonner"
 
 type SimpleCustomer = { id: string; fullName: string }
 type SimpleSubscription = { id: string; name: string; period?: 'MONTHLY'|'YEARLY'; startDate?: string; endDate?: string; price?: string }
+type CustomerBalanceSummary = {
+  balance: number
+  taxExcludedBalance?: number
+}
 
 interface PaymentFormProps {
   onSubmit?: (data: PaymentCreate) => Promise<void>
@@ -22,6 +37,7 @@ interface PaymentFormProps {
   embedded?: boolean
   initial?: Partial<PaymentCreate>
   manualCollectionOnly?: boolean
+  lockCustomerSelection?: boolean
 }
 
 export function PaymentForm({
@@ -31,11 +47,14 @@ export function PaymentForm({
   embedded = false,
   initial,
   manualCollectionOnly = false,
+  lockCustomerSelection = false,
 }: PaymentFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [customers, setCustomers] = useState<SimpleCustomer[]>([])
   const [subscriptions, setSubscriptions] = useState<SimpleSubscription[]>([])
   const [subscriptionDebt, setSubscriptionDebt] = useState<string>("")
+  const [customerBalance, setCustomerBalance] = useState<CustomerBalanceSummary | null>(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
   const toYmd = (d: Date) => {
     const y = d.getFullYear()
     const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -104,6 +123,42 @@ export function PaymentForm({
     } catch {}
   }
 
+  const loadCustomerBalance = useCallback(async (customerId: string) => {
+    if (!manualCollectionOnly) return
+    if (!customerId) {
+      setCustomerBalance(null)
+      return
+    }
+
+    setBalanceLoading(true)
+    try {
+      const res = await fetch(`/api/accounting/customers/${encodeURIComponent(customerId)}`)
+      if (!res.ok) throw new Error("Cari bakiye alınamadı")
+      const data = await res.json()
+      setCustomerBalance({
+        balance: Number(data.summary?.balance || 0),
+        taxExcludedBalance: Number(data.summary?.taxExcludedBalance || 0),
+      })
+    } catch {
+      setCustomerBalance(null)
+      toast.error("Müşteri cari bakiyesi alınamadı")
+    } finally {
+      setBalanceLoading(false)
+    }
+  }, [manualCollectionOnly])
+
+  const formatMoney = (value: number) =>
+    new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+      maximumFractionDigits: 2,
+    }).format(Number.isFinite(value) ? value : 0)
+
+  const toAmountInputValue = (value: number) => {
+    if (!Number.isFinite(value) || value <= 0) return ""
+    return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.?0+$/, "")
+  }
+
   const handleSubmit = async (data: PaymentCreate) => {
     setIsLoading(true)
     try {
@@ -140,12 +195,272 @@ export function PaymentForm({
     const cid = form.getValues('customerId')
     if (cid) {
       loadSubscriptions(cid)
+      if (manualCollectionOnly) loadCustomerBalance(cid)
     }
     const sid = form.getValues('subscriptionId')
     if (cid && sid) {
       computeSubscriptionDebt(cid, sid)
     }
-  }, [form])
+  }, [form, loadCustomerBalance, manualCollectionOnly])
+
+  const grossBalance = customerBalance?.balance ?? 0
+  const taxExcludedBalance = customerBalance?.taxExcludedBalance ?? grossBalance
+  const collectibleBalance = Math.max(grossBalance, 0)
+  const selectedCustomerId = form.watch("customerId")
+  const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId)
+  const fillCollectibleBalance = () => {
+    form.setValue("amount", toAmountInputValue(collectibleBalance), { shouldValidate: true })
+  }
+
+  if (embedded && manualCollectionOnly) {
+    return (
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(handleSubmit)}
+          className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
+              <div className="min-w-0">
+                <p className="font-medium text-sky-950">Bu ekran sadece alınan parayı kaydeder.</p>
+                <p className="mt-1 text-sky-800/80">
+                  Satış, fatura, domain veya hosting oluşturmaz; müşteri carisindeki alacağı düşürür.
+                </p>
+              </div>
+            </div>
+
+            <Card className="gap-0 py-0">
+              <CardHeader className="border-b p-4">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-sky-700" />
+                  <CardTitle className="text-base">Tahsilat Bilgileri</CardTitle>
+                </div>
+                <CardDescription>Müşteri, tutar ve tahsilat tarihini girin.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {lockCustomerSelection && selectedCustomerId ? (
+                    <div className="md:col-span-2">
+                      <div className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+                        <User className="h-3.5 w-3.5 text-sky-700" />
+                        Müşteri
+                      </div>
+                      <div className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-sky-950">
+                            {selectedCustomer?.fullName || "Seçili müşteri"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-sky-800/80">Müşteri detayından seçildi</p>
+                        </div>
+                        <User className="h-4 w-4 shrink-0 text-sky-700" />
+                      </div>
+                    </div>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="customerId"
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-sky-700" />
+                            Müşteri
+                          </FormLabel>
+                          <Select
+                            onValueChange={(v) => {
+                              field.onChange(v)
+                              loadCustomerBalance(v)
+                            }}
+                            defaultValue={field.value || undefined}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Müşteri seçin" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {customers.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>{c.fullName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <Banknote className="h-3.5 w-3.5 text-emerald-700" />
+                          Tahsilat Tutarı
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input
+                              placeholder="Örn: 1500"
+                              inputMode="decimal"
+                              pattern="[0-9]+(\.[0-9]{1,2})?"
+                              className="h-11 pr-12 text-base font-medium"
+                              {...field}
+                            />
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                              TL
+                            </span>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="dueDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-indigo-700" />
+                          Tahsilat Tarihi
+                        </FormLabel>
+                        <FormControl>
+                          <Input type="date" aria-required="true" className="h-11" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <CircleDollarSign className="h-3.5 w-3.5 text-amber-700" />
+                          Para Birimi
+                        </FormLabel>
+                        <FormControl>
+                          <Input placeholder="TRY" className="h-11" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="note"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5 text-slate-600" />
+                          Açıklama
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Örn: Banka havalesi, elden tahsilat..."
+                            className="min-h-11 resize-none"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
+            <Card className="gap-0 py-0">
+              <CardHeader className="border-b p-4">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-red-700" />
+                  <CardTitle className="text-base">Cari Özet</CardTitle>
+                </div>
+                <CardDescription>Tahsilat brüt/yasal cari bakiyeyi düşürür.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 p-4">
+                {selectedCustomerId ? (
+                  <>
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-wide text-red-700">
+                            Tahsil Edilebilir Borç
+                          </p>
+                          <p className="mt-2 text-2xl font-semibold tracking-tight text-red-700">
+                            {balanceLoading ? "Yükleniyor" : formatMoney(collectibleBalance)}
+                          </p>
+                        </div>
+                        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg border border-red-200 bg-red-50/60 p-3">
+                        <div className="flex items-center gap-1.5 text-red-700">
+                          <Wallet className="h-3.5 w-3.5" />
+                          <p>Brüt/Yasal</p>
+                        </div>
+                        <p className="mt-1 font-semibold text-red-700">{formatMoney(grossBalance)}</p>
+                      </div>
+                      <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+                        <div className="flex items-center gap-1.5 text-amber-700">
+                          <CircleDollarSign className="h-3.5 w-3.5" />
+                          <p>KDV Hariç</p>
+                        </div>
+                        <p className="mt-1 font-semibold text-amber-800">{formatMoney(taxExcludedBalance)}</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      disabled={balanceLoading || collectibleBalance <= 0}
+                      onClick={fillCollectibleBalance}
+                    >
+                      Borç Kadar Doldur
+                    </Button>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    Cari borcu görmek ve tek tıkla doldurmak için müşteri seçin.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="gap-0 border-emerald-200 bg-emerald-50/50 py-0">
+              <CardContent className="space-y-4 p-4">
+                <div className="flex items-start gap-3 text-sm">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <div>
+                    <p className="font-medium text-emerald-950">Manuel tahsilat olarak işlenecek</p>
+                    <p className="mt-1 text-emerald-800/80">
+                      Kayıt, ödeme hareketi ve cari alacak düşümü oluşturur.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Button type="submit" className="w-full" disabled={isLoading}>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    {isLoading ? "Kaydediliyor..." : "Tahsilatı Kaydet"}
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" onClick={onCancel}>
+                    İptal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </form>
+      </Form>
+    )
+  }
 
   return (
     <Card className={embedded ? "border" : "w-full max-w-2xl mx-auto"}>
@@ -169,6 +484,33 @@ export function PaymentForm({
               </div>
             ) : null}
 
+            {manualCollectionOnly && selectedCustomerId ? (
+              <div className="flex flex-col gap-3 rounded-lg border p-3 text-sm md:flex-row md:items-center md:justify-between">
+                <div className="flex gap-3">
+                  <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Müşteri cari borcu</p>
+                    <p className="mt-1 text-muted-foreground">
+                      {balanceLoading
+                        ? "Cari bakiye yükleniyor"
+                        : `Brüt/Yasal: ${formatMoney(grossBalance)} · KDV hariç: ${formatMoney(taxExcludedBalance)}`}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Tahsilat cari bakiyeyi brüt/yasal tutar üzerinden düşürür.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={balanceLoading || collectibleBalance <= 0}
+                  onClick={fillCollectibleBalance}
+                >
+                  Borç Kadar Doldur
+                </Button>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -178,7 +520,11 @@ export function PaymentForm({
                     <FormLabel>Müşteri</FormLabel>
                     <Select onValueChange={(v) => {
                       field.onChange(v)
-                      if (!manualCollectionOnly) loadSubscriptions(v)
+                      if (manualCollectionOnly) {
+                        loadCustomerBalance(v)
+                      } else {
+                        loadSubscriptions(v)
+                      }
                     }} defaultValue={field.value || undefined}>
                       <SelectTrigger>
                         <SelectValue placeholder="Müşteri seçin" />
@@ -253,8 +599,8 @@ export function PaymentForm({
                       <div className="relative">
                         <Input
                           placeholder="Örn: 1500"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
+                          inputMode="decimal"
+                          pattern="[0-9]+(\.[0-9]{1,2})?"
                           className="pr-12"
                           {...field}
                         />

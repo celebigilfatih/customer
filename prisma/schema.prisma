@@ -62,6 +62,7 @@ enum PaymentStatus {
   DUE
   LATE
   PAID
+  CANCELLED
 }
 
 enum PaymentType {
@@ -116,6 +117,8 @@ enum TransactionType {
   PROPOSAL_DEBT
   INVOICE_DEBT
   PAYMENT_CREDIT
+  INVOICE_CANCELLATION_CREDIT
+  PAYMENT_CANCELLATION_DEBIT
   MANUAL_ADJUSTMENT
 }
 
@@ -141,11 +144,13 @@ enum InvoiceStatus {
 enum SupplierPurchaseStatus {
   DUE
   PAID
+  CANCELLED
 }
 
 enum SupplierTransactionType {
   PURCHASE_DEBT
   SUPPLIER_PAYMENT
+  PURCHASE_CANCELLATION
 }
 
 // ============================================

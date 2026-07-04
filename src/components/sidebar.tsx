@@ -68,7 +68,8 @@ function getSections(pathname: string): NavSection[] {
         title: "İşlemler",
         icon: <ClipboardList className="h-4 w-4" />,
         items: [
-          { label: "Direkt Satış", href: routes.admin.salesNew, icon: <ShoppingCart className="h-4 w-4" /> },
+          { label: "Satışlar", href: routes.admin.sales, icon: <ShoppingCart className="h-4 w-4" /> },
+          { label: "Yeni Satış", href: routes.admin.salesNew, icon: <ShoppingCart className="h-4 w-4" /> },
           { label: "Teklifler", href: routes.admin.proposals, icon: <FileText className="h-4 w-4" /> },
           { label: "Görev ve Talepler", href: routes.admin.tasks, icon: <ClipboardList className="h-4 w-4" /> },
         ],

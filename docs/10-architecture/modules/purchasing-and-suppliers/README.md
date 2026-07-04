@@ -43,6 +43,13 @@ Products And Stock owns stock-tracked product quantity and stock movements. Doma
   - May create Domain or Hosting operational records for domain/hosting catalog service lines.
   - Must not create stock movements for `SERVICE` lines.
 
+- `/api/sales/[id]/cancel`
+  - Coordinates sale cancellation with supplier payables inside the same transaction.
+  - Unpaid `SupplierPurchase.status = DUE` rows are marked `CANCELLED`.
+  - Creates `PURCHASE_CANCELLATION` supplier ledger rows to reverse unpaid purchase debt.
+  - Rejects cancellation with `409` when any linked supplier purchase is already `PAID` or has a supplier payment.
+  - Does not delete supplier purchases, supplier payments, or supplier account transactions.
+
 ## Supplier Running Balance Rule
 
 Supplier balance means "amount we owe to this supplier".
@@ -53,6 +60,7 @@ newBalance = previousBalance + credit - debit
 
 - `PURCHASE_DEBT`: `credit = purchase.total`, balance increases.
 - `SUPPLIER_PAYMENT`: `debit = payment.amount`, balance decreases.
+- `PURCHASE_CANCELLATION`: `debit = purchase.total`, balance decreases by reversing unpaid purchase debt.
 
 Use `src/lib/supplier-ledger.ts` for supplier ledger mutations and rebuilds. Do not hand-write supplier transaction balances in route handlers.
 
@@ -62,6 +70,7 @@ Use `src/lib/supplier-ledger.ts` for supplier ledger mutations and rebuilds. Do 
 - Treating domain/hosting services as stock-tracked products creates fake inventory and blocks demand-driven purchasing.
 - Partial supplier payments are not modeled in V1; the payment endpoint intentionally requires full purchase closure.
 - Retrying direct sale without `idempotencyKey` can duplicate both customer receivable and supplier payable records.
+- Cancelling a sale with paid supplier purchases requires a separate supplier refund/correction workflow; automatic cancellation intentionally refuses that case.
 
 ## Rollback Strategy
 
@@ -69,3 +78,4 @@ Use `src/lib/supplier-ledger.ts` for supplier ledger mutations and rebuilds. Do 
 - Search by `invoices.idempotencyKey` first; then compare invoice items, supplier purchases, supplier transactions, domain/hosting records, and stock movements as one unit.
 - For a duplicated unpaid supplier purchase, preserve IDs before deleting or reversing records.
 - For a supplier payment error, verify `SupplierPayment`, `SUPPLIER_PAYMENT`, and the related `SupplierPurchase.status` together.
+- For sale cancellation, verify `SupplierPurchase.status`, `PURCHASE_CANCELLATION`, and supplier running balance together.

@@ -9,6 +9,7 @@ export const routes = {
     domains: "/admin/domains",
     hosting: "/admin/hosting",
     proposals: "/admin/proposals",
+    sales: "/admin/sales",
     salesNew: "/admin/sales/new",
     suppliers: "/admin/suppliers",
     tasks: "/admin/tasks",

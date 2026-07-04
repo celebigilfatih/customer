@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Filter, Pencil, Trash2, X } from "lucide-react"
 
 type PaymentStatus = "DUE" | "LATE" | "PAID"
+export type PaymentStatusFilter = PaymentStatus | "RECEIVABLE"
 
 type PaymentListItem = {
   id: string
@@ -52,12 +53,17 @@ const toDateInputValue = (value: string | Date | null | undefined) => {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString().slice(0, 10)
 }
 
-export function PaymentList() {
+type PaymentListProps = {
+  statusFilter?: PaymentStatusFilter
+  onStatusFilterChange?: (status: PaymentStatusFilter | undefined) => void
+}
+
+export function PaymentList({ statusFilter, onStatusFilterChange }: PaymentListProps = {}) {
   const [items, setItems] = useState<PaymentListItem[]>([])
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
-  const [status, setStatus] = useState<string | undefined>(undefined)
+  const [internalStatus, setInternalStatus] = useState<PaymentStatusFilter | undefined>(undefined)
   const [loading, setLoading] = useState(false)
   const [customersMap, setCustomersMap] = useState<Record<string, string>>({})
   const [subsMap, setSubsMap] = useState<Record<string, string>>({})
@@ -68,12 +74,23 @@ export function PaymentList() {
   const [dueFrom, setDueFrom] = useState("")
   const [dueTo, setDueTo] = useState("")
   const [currency, setCurrency] = useState<string | undefined>(undefined)
+  const isStatusControlled = Boolean(onStatusFilterChange)
+  const status = isStatusControlled ? statusFilter : internalStatus
+
+  const updateStatus = (nextStatus: PaymentStatusFilter | undefined) => {
+    if (!isStatusControlled) setInternalStatus(nextStatus)
+    onStatusFilterChange?.(nextStatus)
+  }
 
   const fetchData = async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) })
-      if (status) params.set("status", status)
+      if (status === "RECEIVABLE") {
+        params.set("statusGroup", "receivable")
+      } else if (status) {
+        params.set("status", status)
+      }
       if (filterCustomerId) params.set("customerId", filterCustomerId)
       if (filterSubscriptionId) params.set("subscriptionId", filterSubscriptionId)
       if (dueFrom) params.set("dueDateFrom", dueFrom)
@@ -123,7 +140,7 @@ export function PaymentList() {
   }, [])
 
   const handleStatusChange = (v: string) => {
-    setStatus(v === ALL_FILTER_VALUE ? undefined : v)
+    updateStatus(v === ALL_FILTER_VALUE ? undefined : v as PaymentStatusFilter)
     setPage(1)
   }
 
@@ -133,7 +150,7 @@ export function PaymentList() {
     setDueFrom("")
     setDueTo("")
     setCurrency(undefined)
-    setStatus(undefined)
+    updateStatus(undefined)
     setPage(1)
   }
 
@@ -240,9 +257,10 @@ export function PaymentList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_FILTER_VALUE}>Durum</SelectItem>
+                <SelectItem value="RECEIVABLE">Tahsil Edilecek</SelectItem>
                 <SelectItem value="DUE">Ödenecek</SelectItem>
                 <SelectItem value="LATE">Gecikmiş</SelectItem>
-                <SelectItem value="PAID">Ödendi</SelectItem>
+                <SelectItem value="PAID">Tahsil Edildi</SelectItem>
               </SelectContent>
             </Select>
 

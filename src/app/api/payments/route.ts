@@ -105,6 +105,7 @@ export async function GET(request: NextRequest) {
     const customerId = sanitizeInput(searchParams.get('customerId') || '')
     const subscriptionId = sanitizeInput(searchParams.get('subscriptionId') || '')
     const status = sanitizeInput(searchParams.get('status') || '')
+    const statusGroup = sanitizeInput(searchParams.get('statusGroup') || '')
     const currency = sanitizeInput(searchParams.get('currency') || '')
     const dueDateFrom = sanitizeInput(searchParams.get('dueDateFrom') || '')
     const dueDateTo = sanitizeInput(searchParams.get('dueDateTo') || '')
@@ -130,6 +131,10 @@ export async function GET(request: NextRequest) {
 
     if (subscriptionId) filters.push({ subscriptionId })
     if (status) filters.push({ status: status as PaymentStatus })
+    if (!status && statusGroup === 'receivable') {
+      filters.push({ status: { in: [PaymentStatus.DUE, PaymentStatus.LATE] } })
+    }
+    if (!status && statusGroup !== 'receivable') filters.push({ status: { not: PaymentStatus.CANCELLED } })
     if (currency) filters.push({ currency })
     if (dueDateFrom) filters.push({ dueDate: { gte: new Date(dueDateFrom) } })
     if (dueDateTo) filters.push({ dueDate: { lte: new Date(dueDateTo) } })
@@ -168,6 +173,8 @@ export async function GET(request: NextRequest) {
       const paidThisMonth = createSummaryBucket()
 
       for (const payment of payments) {
+        if (payment.status === PaymentStatus.CANCELLED) continue
+
         const taxExcludedAmount = calculateTaxExcludedPaymentAmount(payment)
         if (payment.status === PaymentStatus.PAID) {
           addToSummaryBucket(paid, taxExcludedAmount, payment.currency)

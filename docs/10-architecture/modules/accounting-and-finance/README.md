@@ -32,15 +32,18 @@ Customer receivable details are displayed inside the unified customer detail rou
 The standalone accounting customer list is not a primary navigation surface. Legacy accounting customer URLs redirect to the unified customer detail route, while Accounting And Finance remains the owner of the backing balance and transaction APIs.
 
 `/admin/finance/add` is a manual collection surface, not a sale surface. It records received money as a paid payment and must not create invoices, domain records, hosting records, stock movements, supplier purchases, or sale line items. Operators must use `/admin/sales/new` when a new sale needs to create those source records.
+When opened for a specific customer, the manual collection form locks the customer selection, displays the customer's current receivable, and may offer to fill the collection amount from the gross/legal balance. This is display and form assistance only; the submitted payment remains the explicit operator-entered amount.
 
 ## Current Server-Side Contracts
 
 - `/api/payments`
   - `GET`: authenticated access. `ADMIN` and `SUPPORT` may read all payments. `CUSTOMER` may read only its own customer payments.
+  - `GET` accepts `statusGroup=receivable` to list active expected collections, meaning `DUE` and `LATE` payments only. This is a read-only filter used by the finance screen's "Tahsil Edilecek" view.
   - Payment list rows return a display-only `sourceLabel` derived from the linked invoice items first, then subscription name, then payment description/note. This lets the finance screen show what was sold without moving sales/catalog ownership into the payment UI.
   - `GET` with `summary=true`: returns real tax-excluded payment summary buckets for collected, open, due, late, and current-month collected payments within the authenticated user's allowed payment scope. It also returns collected payment tax totals for the finance summary cards. Invoice-linked payments use the invoice `subtotal / total` ratio; payments without invoice tax detail are returned at their recorded amount and have zero derived tax.
   - `POST`, `PUT`, `DELETE`: `ADMIN` or `SUPPORT` only.
   - A payment with status `PAID` creates or updates one `PAYMENT_CREDIT` account transaction.
+  - A payment with status `CANCELLED` is excluded from active payment lists and finance summaries by default.
   - If the payment is linked to an invoice, the related `PAYMENT_CREDIT` also carries the same `invoiceId` for audit traceability.
   - A payment moved from `PAID` to `DUE` or `LATE` removes the related payment credit and rebuilds the customer's running balances.
   - Deleting a payment without an invoice removes related payment ledger entries and rebuilds the customer's running balances.
@@ -57,6 +60,7 @@ The standalone accounting customer list is not a primary navigation surface. Leg
   - Also returns tax-excluded display values through `taxExcludedDebit`, `taxExcludedCredit`, `taxExcludedBalance`, and tax-excluded summary totals.
   - Invoice-linked transactions use the invoice `subtotal / total` ratio for tax-excluded display values. Transactions without invoice tax detail fall back to their recorded ledger amount.
   - Invoice-linked transactions return `displayDescription` from invoice items using domain, hosting, catalog service/product, or item description labels, while preserving the original ledger `description`.
+  - Customer detail accounting summary cards are outstanding-balance focused: they show tax-excluded remaining debt, remaining tax (`balance - taxExcludedBalance`), and gross/legal remaining balance. Lifetime debit and credit totals remain available for audit/detail views but must not be used as the primary receivable summary.
 
 - `/api/invoices`
   - `ADMIN` or `SUPPORT` only.
@@ -78,6 +82,15 @@ The standalone accounting customer list is not a primary navigation surface. Leg
   - `SERVICE` lines do not affect stock and do not create stock movements.
   - Reusing the same `idempotencyKey` returns the existing invoice result instead of creating another sale.
 
+- `/api/sales/[id]/cancel`
+  - `ADMIN` or `SUPPORT` only.
+  - Cancels `Invoice.type = SALE` without hard-deleting invoice, payment, account transaction, or stock movement history.
+  - Creates `INVOICE_CANCELLATION_CREDIT` to reverse the customer invoice debt.
+  - Marks linked paid payments as `CANCELLED`.
+  - Creates `PAYMENT_CANCELLATION_DEBIT` to reverse each cancelled paid payment credit.
+  - Rebuilds the affected customer running balance after all reversal rows are created.
+  - Stock and supplier reversals are coordinated in the same transaction while their domain rules remain owned by Products And Stock and Purchasing And Suppliers.
+
 - `/api/subscriptions`
   - Subscription mutations are `ADMIN` or `SUPPORT` only.
   - Subscription creation may create due payment schedule rows server-side in the same transaction.
@@ -93,6 +106,18 @@ newBalance = previousBalance + debit - credit
 
 Use `src/lib/accounting-ledger.ts` for new account transactions or balance rebuilds. Do not hand-write `balance` values in route handlers.
 
+Cancellation transaction types:
+
+- `INVOICE_CANCELLATION_CREDIT`: reverses a prior sale invoice debt.
+- `PAYMENT_CANCELLATION_DEBIT`: reverses a prior payment credit.
+
+Payment status meanings:
+
+- `DUE`: unpaid expected collection.
+- `LATE`: overdue expected collection.
+- `PAID`: collected payment and eligible for `PAYMENT_CREDIT`.
+- `CANCELLED`: reversed payment; not treated as active collected cash.
+
 ## Operational Risks
 
 - Duplicate or client-side payment creation can overstate receivables.
@@ -102,6 +127,7 @@ Use `src/lib/accounting-ledger.ts` for new account transactions or balance rebui
 - Direct-sale retries without idempotency can duplicate invoices, customer debt, payments, and stock movements.
 - Deleting invoice-linked payments without reversing invoice debt and stock movements can leave orphan financial or stock state.
 - Mixing supplier payable records into customer account transactions corrupts customer receivable balances.
+- Hard-deleting sales or payments removes audit evidence; use safe cancellation and reversal rows for sale corrections.
 
 ## Rollback Strategy
 
@@ -111,3 +137,4 @@ Use `src/lib/accounting-ledger.ts` for new account transactions or balance rebui
 - For invoice issuance failures, verify invoice status, related account transaction count, stock movement count, and product stock before retrying.
 - For direct-sale incidents, first search by `invoices.idempotencyKey`; then verify the invoice, payment, account transaction, and stock movement rows as one unit.
 - If supplier purchase data exists on the sale, also verify supplier purchases, supplier payments, supplier account transactions, and domain/hosting records.
+- For sale cancellation incidents, reconcile `INVOICE_CANCELLATION_CREDIT`, `PAYMENT_CANCELLATION_DEBIT`, cancelled payment statuses, and the rebuilt customer balance before reopening the action.

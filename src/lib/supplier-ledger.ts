@@ -106,3 +106,22 @@ export async function createSupplierPaymentTransaction(
     description: payment.note ? `Tedarikçi ödemesi: ${payment.note}` : "Tedarikçi ödemesi",
   })
 }
+
+export async function createSupplierPurchaseCancellationTransaction(
+  tx: SupplierLedgerTx,
+  purchase: {
+    id: string
+    supplierId: string
+    total: Prisma.Decimal
+    description: string
+  }
+) {
+  return createSupplierAccountTransaction(tx, {
+    supplierId: purchase.supplierId,
+    type: SupplierTransactionType.PURCHASE_CANCELLATION,
+    debit: purchase.total,
+    credit: 0,
+    purchaseId: purchase.id,
+    description: `Alış iptali: ${purchase.description}`,
+  })
+}

@@ -4,6 +4,27 @@ All notable repository changes should be documented here.
 
 ## 2026-07-04
 
+### Added
+
+- Added ADR 0008 for sales management and safe cancellation.
+- Added `/admin/sales`, `/admin/sales/[id]`, and `/admin/sales/[id]/edit` for sale listing, sale detail, limited metadata editing, and audited cancellation.
+- Added sales list/detail/edit/cancel APIs over `Invoice.type = SALE` without introducing a duplicate sale model.
+- Added safe sale cancellation with invoice `CANCELLED`, customer ledger reversal entries, cancelled payment status, stock `IN` reversal movements, unpaid supplier purchase cancellation, and domain/hosting cancellation notes.
+- Added cancellation enum values for customer ledger, supplier ledger, supplier purchase status, and payment status.
+- Added separate sidebar entries for `Satışlar` and `Yeni Satış`.
+- Added a customer detail `Tahsilat Yap` action that opens manual collection with the customer preselected and returns to the customer ledger after save/cancel.
+- Added a `/admin/finance` "Tahsil Edilecek" summary card and receivable list filter for active due or late payments.
+- Added customer receivable context and a "Borç Kadar Doldur" action to manual collection forms opened from customer detail.
+
+### Changed
+
+- Excluded cancelled payments from active finance lists and summary cards by default.
+- Refined `/admin/sales/[id]` into a compact summary-and-tabs layout for sale items, payments, ledger/stock effects, supplier purchases, and domain/hosting operations.
+- Refined customer-scoped `/admin/finance/add` manual collection into a two-panel layout with compact payment fields, receivable context, and primary collection actions.
+- Added stronger receivable color and icon emphasis to the customer-scoped manual collection screen.
+- Locked customer selection on customer-scoped manual collection so operators cannot accidentally switch customers after entering from customer detail.
+- Refined customer accounting summary cards to show outstanding KDV-excluded balance, remaining KDV, and gross/legal remaining balance instead of lifetime debit and credit totals.
+
 ### Fixed
 
 - Added ADR 0007 for the payment-linked invoice delete contract.

@@ -6,11 +6,12 @@ import {
   ArrowLeft,
   ArrowRight,
   Building2,
+  CreditCard,
   Edit,
   FileText,
   MapPin,
+  Percent,
   Phone,
-  TrendingDown,
   TrendingUp,
   User,
   Wallet,
@@ -120,6 +121,8 @@ function getTransactionLabel(type: string) {
     PROPOSAL_DEBT: "Teklif Borcu",
     INVOICE_DEBT: "Fatura Borcu",
     PAYMENT_CREDIT: "Tahsilat",
+    INVOICE_CANCELLATION_CREDIT: "Fatura İptali",
+    PAYMENT_CANCELLATION_DEBIT: "Tahsilat İptali",
     MANUAL_ADJUSTMENT: "Düzeltme",
   }
   return labels[type] ?? type
@@ -281,6 +284,9 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
     totalCredit: summary.taxExcludedTotalCredit ?? summary.totalCredit,
     balance: summary.taxExcludedBalance ?? summary.balance,
   }
+  const outstandingTaxExcludedBalance = taxExcludedSummary.balance
+  const outstandingGrossBalance = summary.balance
+  const outstandingTaxAmount = Math.max(outstandingGrossBalance - outstandingTaxExcludedBalance, 0)
   const recentTransactions = accounting.transactions.slice(0, 5)
 
   return (
@@ -294,10 +300,19 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
           { label: customer.fullName },
         ]}
         actions={
-          <Button onClick={() => router.push(routes.customers.edit(customer.id))}>
-            <Edit className="mr-2 h-4 w-4" />
-            Düzenle
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/admin/finance/add?customerId=${encodeURIComponent(customer.id)}`)}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Tahsilat Yap
+            </Button>
+            <Button onClick={() => router.push(routes.customers.edit(customer.id))}>
+              <Edit className="mr-2 h-4 w-4" />
+              Düzenle
+            </Button>
+          </div>
         }
       />
 
@@ -380,9 +395,11 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
                     <TrendingUp className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Toplam Borç KDV Hariç</p>
-                    <p className="text-xl font-bold text-red-600">{formatCurrency(taxExcludedSummary.totalDebit)}</p>
-                    <GrossAmountText label="Brüt/Yasal borç" value={summary.totalDebit} />
+                    <p className="text-sm text-muted-foreground">Kalan Borç KDV Hariç</p>
+                    <p className="text-xl font-bold text-red-600">
+                      {formatCurrency(outstandingTaxExcludedBalance)}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">Tahsil edilebilir net kalan</p>
                   </div>
                 </div>
               </CardContent>
@@ -391,13 +408,13 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-green-100 p-2">
-                    <TrendingDown className="h-5 w-5 text-green-600" />
+                  <div className="rounded-lg bg-amber-100 p-2">
+                    <Percent className="h-5 w-5 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Toplam Alacak KDV Hariç</p>
-                    <p className="text-xl font-bold text-green-600">{formatCurrency(taxExcludedSummary.totalCredit)}</p>
-                    <GrossAmountText label="Brüt/Yasal alacak" value={summary.totalCredit} />
+                    <p className="text-sm text-muted-foreground">Kalan KDV</p>
+                    <p className="text-xl font-bold text-amber-700">{formatCurrency(outstandingTaxAmount)}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Kalan tutar ile KDV hariç farkı</p>
                   </div>
                 </div>
               </CardContent>
@@ -410,12 +427,12 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
                     <Wallet className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Net Bakiye KDV Hariç</p>
+                    <p className="text-sm text-muted-foreground">Kalan Tutar</p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xl font-bold">{formatCurrency(taxExcludedSummary.balance)}</p>
-                      {getBalanceBadge(taxExcludedSummary.balance)}
+                      <p className="text-xl font-bold">{formatCurrency(outstandingGrossBalance)}</p>
+                      {getBalanceBadge(outstandingGrossBalance)}
                     </div>
-                    <GrossAmountText label="Brüt/Yasal bakiye" value={summary.balance} />
+                    <GrossAmountText label="Brüt/Yasal bakiye" value={outstandingGrossBalance} />
                   </div>
                 </div>
               </CardContent>

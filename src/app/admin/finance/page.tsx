@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { routes } from "@/lib/routes"
-import { PaymentList } from "@/components/payment-list"
+import { PaymentList, type PaymentStatusFilter } from "@/components/payment-list"
 import { PageHeader } from "@/components/page-header"
 
 type SummaryTotal = {
@@ -51,7 +51,12 @@ const formatTotals = (bucket: SummaryBucket) => {
   return bucket.totals.map((total) => formatMoney(total.amount, total.currency)).join(" + ")
 }
 
-function FinanceSummaryCards() {
+type FinanceSummaryCardsProps = {
+  activeFilter?: PaymentStatusFilter
+  onFilterChange: (filter: PaymentStatusFilter | undefined) => void
+}
+
+function FinanceSummaryCards({ activeFilter, onFilterChange }: FinanceSummaryCardsProps) {
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -89,16 +94,18 @@ function FinanceSummaryCards() {
       icon: Percent,
     },
     {
+      title: "Tahsil Edilecek",
+      value: formatTotals(summary?.open || emptyBucket),
+      meta: `${summary?.open.count || 0} bekleyen/gecikmiş`,
+      icon: CalendarCheck,
+      filter: "RECEIVABLE" as const,
+    },
+    {
       title: "Gecikmiş",
       value: formatTotals(summary?.late || emptyBucket),
       meta: `${summary?.late.count || 0} gecikmiş`,
       icon: AlertTriangle,
-    },
-    {
-      title: "Bu Ay",
-      value: formatTotals(summary?.paidThisMonth || emptyBucket),
-      meta: `${summary?.paidThisMonth.count || 0} ödeme`,
-      icon: CalendarCheck,
+      filter: "LATE" as const,
     },
   ]
 
@@ -107,9 +114,31 @@ function FinanceSummaryCards() {
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon
+          const isActive = card.filter && activeFilter === card.filter
           return (
-            <Card key={card.title}>
-              <CardContent className="flex min-h-[104px] items-center justify-between gap-3 p-4">
+            <Card
+              key={card.title}
+              className={isActive ? "border-foreground shadow-sm" : undefined}
+            >
+              <CardContent
+                className={
+                  card.filter
+                    ? "flex min-h-[104px] cursor-pointer items-center justify-between gap-3 p-4 transition-colors hover:bg-muted/30"
+                    : "flex min-h-[104px] items-center justify-between gap-3 p-4"
+                }
+                onClick={() => {
+                  if (card.filter) onFilterChange(isActive ? undefined : card.filter)
+                }}
+                role={card.filter ? "button" : undefined}
+                tabIndex={card.filter ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!card.filter) return
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault()
+                    onFilterChange(isActive ? undefined : card.filter)
+                  }
+                }}
+              >
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium uppercase text-muted-foreground">{card.title}</p>
                   {loading ? (
@@ -137,6 +166,8 @@ function FinanceSummaryCards() {
 
 export default function AdminFinancePage() {
   const router = useRouter()
+  const [statusFilter, setStatusFilter] = useState<PaymentStatusFilter | undefined>(undefined)
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -153,8 +184,8 @@ export default function AdminFinancePage() {
           </Button>
         }
       />
-      <FinanceSummaryCards />
-      <PaymentList />
+      <FinanceSummaryCards activeFilter={statusFilter} onFilterChange={setStatusFilter} />
+      <PaymentList statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />
     </div>
   )
 }

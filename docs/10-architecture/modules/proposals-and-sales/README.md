@@ -27,7 +27,10 @@ Sales flows may request accounting or stock mutations only through explicit serv
 - `/api/invoices` can create draft invoices, and `/api/invoices/[id]/issue` can issue an invoice, create `INVOICE_DEBT`, and create stock movements.
 - `/admin/invoices` currently lists invoices only; it does not provide a create or issue action.
 - `/admin/sales/new` is the direct-sale UI for quote-independent sales.
+- `/admin/sales` is the sale management UI for listing sale invoices, opening sale detail, performing limited metadata edits, and starting safe cancellation.
 - `/api/sales/direct` is the server-side direct-sale contract. It creates the sale invoice, customer debt, stock movements for stock-tracked products, and optional payment inside one database transaction.
+- `/api/sales` and `/api/sales/[id]` are read/update surfaces for `Invoice.type = SALE`; they do not introduce a separate sale table.
+- `/api/sales/[id]/cancel` is the safe cancellation contract. It reverses financial and stock effects with compensating records instead of hard-deleting sale history.
 - Direct sale may also collect line-level supplier purchase information for demand-driven services such as domain and hosting.
 
 ## Direct Sale Contract
@@ -57,6 +60,38 @@ Supported payment modes:
 The accepted cross-context mutation order is recorded in ADR 0003.
 Catalog service behavior is recorded in ADR 0004.
 Supplier purchase behavior is recorded in ADR 0006.
+Sales management and safe cancellation behavior is recorded in ADR 0008.
+
+## Sale Management Contract
+
+The sale document is the `SALE` invoice. Sales must not be duplicated into a second sale table.
+
+Allowed post-creation edits:
+
+- Invoice due date.
+- Invoice notes.
+- Linked domain/hosting operational metadata.
+
+Forbidden post-creation edits:
+
+- Customer.
+- Sale line items.
+- Unit price, quantity, tax, subtotal, and total.
+- Customer payments.
+- Stock movements.
+- Supplier purchase amounts and payments.
+
+Corrections to forbidden fields require safe cancellation and a new sale.
+
+Safe cancellation must:
+
+- Set invoice status to `CANCELLED`.
+- Preserve the original invoice, payment, ledger, and stock rows.
+- Create customer ledger reversal rows through Accounting And Finance.
+- Create stock `IN` reversal rows through Products And Stock for prior `OUT` movements.
+- Cancel unpaid supplier purchases through Purchasing And Suppliers.
+- Reject automatic cancellation when supplier payment has already been made.
+- Keep linked domain/hosting records with an operational cancellation note.
 
 ## Non-Responsibilities
 
@@ -77,6 +112,7 @@ Proposals And Sales must not:
 - Retrying direct-sale requests without `idempotencyKey` can duplicate invoices and stock movements.
 - Treating reusable services as stock-tracked products can create fake inventory or block legitimate service sales.
 - Creating supplier purchases outside the direct-sale transaction can leave customer sale and supplier payable records out of sync.
+- Hard-deleting a sale, invoice, payment, or stock movement hides audit history and can corrupt customer or supplier balances.
 
 ## Rollback Notes
 
@@ -85,3 +121,4 @@ Proposals And Sales must not:
 - Disable the affected sale action before reconciling financial records.
 - For direct-sale retries, search `invoices.idempotencyKey` before creating replacement records.
 - When line-level purchases exist, compare invoice items, supplier purchases, supplier transactions, and supplier payments as one unit.
+- For cancelled sales, verify the original invoice, reversal account transactions, payment statuses, compensating stock movements, and supplier purchase statuses together.

@@ -126,7 +126,7 @@ Observed implementation areas:
 - `src/app/portal/proposals/`
 - `src/app/api/proposals/`
 - `src/app/admin/sales/`
-- `src/app/api/sales/direct/`
+- `src/app/api/sales/`
 - `src/app/admin/settings/proposal-types/`
 - `src/components/proposal-*`
 - `src/components/direct-sale-form.tsx`
@@ -136,6 +136,11 @@ Non-responsibilities:
 - Invoice issuance after conversion unless documented by ADR
 - Payment reconciliation
 - Supplier payable ledger ownership
+
+Operational requirements:
+
+- Sales are represented by `Invoice.type = SALE`; do not create duplicate sale storage without a new ADR.
+- Financial sale corrections use safe cancellation and compensating records as documented in ADR 0008.
 
 ### Accounting And Finance
 
@@ -162,6 +167,11 @@ Non-responsibilities:
 - Silent mutation of source domain records
 - Subscription lifecycle decisions without an explicit integration contract
 - Supplier payable ledger rules, which are owned by Purchasing And Suppliers
+
+Operational requirements:
+
+- Sale cancellation customer effects must use auditable ledger reversal types, not deleted ledger rows.
+- Cancelled payments are not active collected cash.
 
 ### Purchasing And Suppliers
 
@@ -196,6 +206,7 @@ Operational requirements:
 - Supplier ledger mutations must be server-side and transactional.
 - Supplier running balance uses purchase debt as balance-increasing and supplier payment as balance-decreasing.
 - Domain/hosting direct-sale purchases must not create stock movements.
+- Sale cancellation may reverse unpaid supplier purchase debt, but paid supplier purchases require a separate supplier correction workflow.
 
 ### Products And Stock
 
