@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { PaymentStatus, Prisma } from '@/generated/prisma'
+import { MovementType, PaymentStatus, Prisma } from '@/generated/prisma'
 import { paymentCreateSchema, paymentUpdateSchema } from '@/lib/validations'
 import { handleApiError, sanitizeInput } from '@/lib/error-handler'
 import { isAdminApiUser, requireAdminApi, requireAuthenticatedApi } from '@/lib/api-auth'
@@ -302,18 +302,110 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const id = sanitizeInput(searchParams.get('id') || '')
     if (!id) return NextResponse.json({ error: 'id gerekli', status: 400 }, { status: 400 })
-    await prisma.$transaction(async (tx) => {
+
+    const result = await prisma.$transaction(async (tx) => {
       const payment = await tx.payment.findUnique({
         where: { id },
-        select: { id: true, customerId: true },
+        select: {
+          id: true,
+          customerId: true,
+          invoiceId: true,
+        },
       })
-      if (!payment) return
+      if (!payment) {
+        return { status: 404 as const, body: { error: 'Ödeme bulunamadı' } }
+      }
 
-      await tx.accountTransaction.deleteMany({ where: { paymentId: payment.id } })
-      await tx.payment.delete({ where: { id } })
-      await rebuildCustomerLedgerBalances(tx, payment.customerId)
+      let deletedInvoiceId: string | null = null
+
+      if (payment.invoiceId) {
+        const invoice = await tx.invoice.findUnique({
+          where: { id: payment.invoiceId },
+          select: {
+            id: true,
+            customerId: true,
+            payments: {
+              select: { id: true },
+            },
+            stockMovements: {
+              select: {
+                id: true,
+                productId: true,
+                type: true,
+                quantity: true,
+              },
+            },
+          },
+        })
+
+        if (!invoice) {
+          return { status: 404 as const, body: { error: 'Bağlı fatura bulunamadı' } }
+        }
+
+        if (invoice.payments.length > 1) {
+          return {
+            status: 409 as const,
+            body: {
+              error: 'Bu faturada birden fazla tahsilat var. Fatura otomatik silinmedi.',
+            },
+          }
+        }
+
+        const unsupportedStockMovement = invoice.stockMovements.find(
+          (movement) => movement.type !== MovementType.OUT
+        )
+
+        if (unsupportedStockMovement) {
+          return {
+            status: 409 as const,
+            body: {
+              error: 'Bu faturada otomatik geri alınamayan stok hareketi var. Fatura silinmedi.',
+            },
+          }
+        }
+
+        await tx.accountTransaction.deleteMany({
+          where: {
+            OR: [
+              { paymentId: payment.id },
+              { invoiceId: invoice.id },
+            ],
+          },
+        })
+
+        for (const movement of invoice.stockMovements) {
+          await tx.product.update({
+            where: { id: movement.productId },
+            data: {
+              stockQuantity: {
+                increment: movement.quantity,
+              },
+            },
+          })
+        }
+
+        await tx.stockMovement.deleteMany({ where: { invoiceId: invoice.id } })
+        await tx.payment.delete({ where: { id: payment.id } })
+        await tx.invoice.delete({ where: { id: invoice.id } })
+        await rebuildCustomerLedgerBalances(tx, invoice.customerId)
+        deletedInvoiceId = invoice.id
+      } else {
+        await tx.accountTransaction.deleteMany({ where: { paymentId: payment.id } })
+        await tx.payment.delete({ where: { id: payment.id } })
+        await rebuildCustomerLedgerBalances(tx, payment.customerId)
+      }
+
+      return {
+        status: 200 as const,
+        body: {
+          ok: true,
+          deletedPaymentId: payment.id,
+          deletedInvoiceId,
+        },
+      }
     })
-    return NextResponse.json({ ok: true }, { status: 200 })
+
+    return NextResponse.json(result.body, { status: result.status })
   } catch (error) {
     return handleApiError(error)
   }

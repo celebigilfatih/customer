@@ -33,6 +33,21 @@ For a payment ID:
 3. If `status = DUE` or `LATE`, verify no `PAYMENT_CREDIT` row remains for that payment.
 4. Recalculate customer balance as `sum(debit) - sum(credit)`.
 
+## Payment And Invoice Delete Verification
+
+When deleting an invoice-linked payment from `/admin/finance`:
+
+1. Confirm the payment has at most one linked invoice payment. If the invoice has multiple payments, the API must return `409` and leave payment, invoice, ledger, and stock records unchanged.
+2. Confirm all linked invoice stock movements are reversible `OUT` movements. If not, the API must return `409` and leave records unchanged.
+3. After a successful delete, verify:
+   - the `payments` row is deleted
+   - the linked `invoices` row is deleted
+   - `account_transactions` rows for the payment and invoice are deleted
+   - `stock_movements` rows for the invoice are deleted
+   - product stock increased by the deleted invoice `OUT` quantities
+   - the customer running balance was rebuilt
+4. If the invoice had domain, hosting, or supplier purchase traceability rows, verify those records are either still valid operational/payable records or are intentionally reconciled separately.
+
 ## Invoice Issue Verification
 
 Before retrying a failed invoice issue:

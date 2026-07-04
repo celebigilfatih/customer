@@ -6,9 +6,11 @@ All notable repository changes should be documented here.
 
 ### Fixed
 
+- Added ADR 0007 for the payment-linked invoice delete contract.
 - Fixed admin user creation so new users receive an explicit `ADMIN`, `SUPPORT`, or `CUSTOMER` role instead of the legacy non-interactive `USER` default.
 - Added customer linkage handling for `CUSTOMER` portal users and protected user-management APIs behind admin/support authentication.
 - Fixed the `/admin/finance` payment source column so invoice-linked direct-sale collections show the sold domain, hosting, product, service, or free-form invoice item instead of an empty source.
+- Updated `/admin/finance` payment deletion so a single-payment linked invoice is deleted in the same transaction, with invoice ledger rows removed, reversible stock movements restored, and customer balances rebuilt.
 
 ## 2026-07-03
 

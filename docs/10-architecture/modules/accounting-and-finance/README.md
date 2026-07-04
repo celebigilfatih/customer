@@ -41,7 +41,9 @@ The standalone accounting customer list is not a primary navigation surface. Leg
   - A payment with status `PAID` creates or updates one `PAYMENT_CREDIT` account transaction.
   - If the payment is linked to an invoice, the related `PAYMENT_CREDIT` also carries the same `invoiceId` for audit traceability.
   - A payment moved from `PAID` to `DUE` or `LATE` removes the related payment credit and rebuilds the customer's running balances.
-  - Deleting a payment removes related payment ledger entries and rebuilds the customer's running balances.
+  - Deleting a payment without an invoice removes related payment ledger entries and rebuilds the customer's running balances.
+  - Deleting a payment linked to a single-payment invoice deletes the payment and the invoice in one transaction, removes the invoice/payment account transactions, reverses invoice `OUT` stock movements back into product stock, deletes the stock movement rows, deletes the invoice, and rebuilds the customer's running balances.
+  - Payment deletion refuses automatic invoice deletion when the linked invoice has multiple payments or stock movements that cannot be safely reversed.
 
 - `/api/accounting/customers`
   - `ADMIN` or `SUPPORT` only.
@@ -96,6 +98,7 @@ Use `src/lib/accounting-ledger.ts` for new account transactions or balance rebui
 - Non-transactional invoice issuance can leave invoice/accounting/stock partially mutated.
 - Manually editing account transactions without rebuilding running balances can corrupt customer balances.
 - Direct-sale retries without idempotency can duplicate invoices, customer debt, payments, and stock movements.
+- Deleting invoice-linked payments without reversing invoice debt and stock movements can leave orphan financial or stock state.
 - Mixing supplier payable records into customer account transactions corrupts customer receivable balances.
 
 ## Rollback Strategy

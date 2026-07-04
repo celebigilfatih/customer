@@ -141,16 +141,20 @@ export function PaymentList() {
     filterCustomerId || filterSubscriptionId || status || dueFrom || dueTo || currency
   )
 
-  const handleDelete = async (id: string) => {
-    const ok = typeof window !== 'undefined' ? window.confirm('Bu ödemeyi silmek istediğinizden emin misiniz?') : true
+  const handleDelete = async (payment: PaymentListItem) => {
+    const confirmationMessage = payment.invoiceId
+      ? 'Bu tahsilatı ve bağlı faturayı silmek istediğinizden emin misiniz? Stoklu ürün varsa stok geri alınır.'
+      : 'Bu tahsilatı silmek istediğinizden emin misiniz?'
+    const ok = typeof window !== 'undefined' ? window.confirm(confirmationMessage) : true
     if (!ok) return
     try {
-      const res = await fetch(`/api/payments?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error('Silme başarısız')
-      toast.success('Ödeme silindi')
+      const res = await fetch(`/api/payments?id=${encodeURIComponent(payment.id)}`, { method: 'DELETE' })
+      const payload = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(payload?.error || 'Silme başarısız')
+      toast.success(payload?.deletedInvoiceId ? 'Tahsilat ve bağlı fatura silindi' : 'Tahsilat silindi')
       fetchData()
-    } catch {
-      toast.error('Ödeme silinemedi')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ödeme silinemedi')
     }
   }
 
@@ -337,7 +341,7 @@ export function PaymentList() {
                             variant="ghost"
                             size="icon"
                             aria-label="Ödemeyi sil"
-                            onClick={() => handleDelete(p.id)}
+                            onClick={() => handleDelete(p)}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
