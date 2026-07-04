@@ -6,15 +6,19 @@ import {
   ArrowLeft,
   ArrowRight,
   Building2,
+  Calendar,
   CreditCard,
   Edit,
+  Filter,
   FileText,
   MapPin,
   Percent,
   Phone,
+  Search,
   TrendingUp,
   User,
   Wallet,
+  X,
 } from "lucide-react"
 import { CustomerWithNotes } from "@/lib/types"
 import { routes } from "@/lib/routes"
@@ -23,6 +27,14 @@ import { CustomerNotes } from "@/components/customer-notes"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -36,6 +48,7 @@ import {
 import { toast } from "sonner"
 
 type DetailTab = "general" | "accounting" | "transactions"
+type TransactionDirectionFilter = "all" | "debit" | "credit"
 
 type DecimalValue = string | number | null | undefined
 
@@ -73,6 +86,22 @@ type AccountingResponse = {
 type Props = {
   customerId: string
   initialTab: string
+}
+
+type TransactionFilters = {
+  search: string
+  type: string
+  direction: TransactionDirectionFilter
+  startDate: string
+  endDate: string
+}
+
+const initialTransactionFilters: TransactionFilters = {
+  search: "",
+  type: "all",
+  direction: "all",
+  startDate: "",
+  endDate: "",
 }
 
 function normalizeTab(value: string): DetailTab {
@@ -135,6 +164,145 @@ function getReference(transaction: AccountTransaction) {
   return "-"
 }
 
+function getTransactionDirection(transaction: AccountTransaction): Exclude<TransactionDirectionFilter, "all"> {
+  return toNumber(transaction.debit) > 0 ? "debit" : "credit"
+}
+
+function getTransactionSearchText(transaction: AccountTransaction) {
+  return [
+    transaction.displayDescription,
+    transaction.description,
+    getTransactionLabel(transaction.type),
+    getReference(transaction),
+    transaction.proposal?.title,
+    transaction.proposal?.number,
+    transaction.invoice?.number,
+    transaction.payment?.type,
+    formatDate(transaction.createdAt),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("tr-TR")
+}
+
+function matchesTransactionFilters(transaction: AccountTransaction, filters: TransactionFilters) {
+  const query = filters.search.trim().toLocaleLowerCase("tr-TR")
+  const createdAt = new Date(transaction.createdAt)
+
+  if (query && !getTransactionSearchText(transaction).includes(query)) return false
+  if (filters.type !== "all" && transaction.type !== filters.type) return false
+  if (filters.direction !== "all" && getTransactionDirection(transaction) !== filters.direction) return false
+  if (filters.startDate && createdAt < new Date(`${filters.startDate}T00:00:00`)) return false
+  if (filters.endDate && createdAt > new Date(`${filters.endDate}T23:59:59`)) return false
+
+  return true
+}
+
+function TransactionFiltersToolbar({
+  filters,
+  transactionTypes,
+  resultCount,
+  totalCount,
+  onChange,
+  onReset,
+}: {
+  filters: TransactionFilters
+  transactionTypes: string[]
+  resultCount: number
+  totalCount: number
+  onChange: (filters: TransactionFilters) => void
+  onReset: () => void
+}) {
+  const hasActiveFilters =
+    filters.search ||
+    filters.type !== "all" ||
+    filters.direction !== "all" ||
+    filters.startDate ||
+    filters.endDate
+
+  return (
+    <div className="rounded-lg border bg-muted/20 p-3">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          Hareket filtreleri
+          <Badge variant="outline" className="font-normal">
+            {resultCount}/{totalCount}
+          </Badge>
+        </div>
+        {hasActiveFilters ? (
+          <Button variant="ghost" size="sm" onClick={onReset} className="h-8 gap-2">
+            <X className="h-4 w-4" />
+            Temizle
+          </Button>
+        ) : null}
+      </div>
+
+      <div className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_160px_140px_150px_150px]">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={filters.search}
+            onChange={(event) => onChange({ ...filters, search: event.target.value })}
+            placeholder="Açıklama, referans veya tür ara"
+            className="h-9 pl-9"
+          />
+        </div>
+
+        <Select value={filters.type} onValueChange={(value) => onChange({ ...filters, type: value })}>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Tür" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm türler</SelectItem>
+            {transactionTypes.map((type) => (
+              <SelectItem key={type} value={type}>
+                {getTransactionLabel(type)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.direction}
+          onValueChange={(value) => onChange({ ...filters, direction: value as TransactionDirectionFilter })}
+        >
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue placeholder="Yön" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tüm yönler</SelectItem>
+            <SelectItem value="debit">Borç</SelectItem>
+            <SelectItem value="credit">Tahsilat</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className="relative">
+          <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="date"
+            value={filters.startDate}
+            onChange={(event) => onChange({ ...filters, startDate: event.target.value })}
+            className="h-9 pl-9"
+            aria-label="Başlangıç tarihi"
+          />
+        </div>
+
+        <div className="relative">
+          <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="date"
+            value={filters.endDate}
+            onChange={(event) => onChange({ ...filters, endDate: event.target.value })}
+            className="h-9 pl-9"
+            aria-label="Bitiş tarihi"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function TransactionTable({
   transactions,
   emptyText,
@@ -143,7 +311,8 @@ function TransactionTable({
   emptyText: string
 }) {
   return (
-    <Table>
+    <div className="overflow-x-auto">
+      <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Tarih</TableHead>
@@ -208,7 +377,8 @@ function TransactionTable({
           })
         )}
       </TableBody>
-    </Table>
+      </Table>
+    </div>
   )
 }
 
@@ -217,6 +387,7 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
   const [activeTab, setActiveTab] = useState<DetailTab>(() => normalizeTab(initialTab))
   const [customer, setCustomer] = useState<CustomerWithNotes | null>(null)
   const [accounting, setAccounting] = useState<AccountingResponse | null>(null)
+  const [transactionFilters, setTransactionFilters] = useState<TransactionFilters>(initialTransactionFilters)
   const [loading, setLoading] = useState(true)
 
   const loadData = useCallback(async () => {
@@ -287,10 +458,15 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
   const outstandingTaxExcludedBalance = taxExcludedSummary.balance
   const outstandingGrossBalance = summary.balance
   const outstandingTaxAmount = Math.max(outstandingGrossBalance - outstandingTaxExcludedBalance, 0)
-  const recentTransactions = accounting.transactions.slice(0, 5)
+  const transactionTypes = Array.from(new Set(accounting.transactions.map((transaction) => transaction.type))).sort()
+  const filteredTransactions = accounting.transactions.filter((transaction) =>
+    matchesTransactionFilters(transaction, transactionFilters)
+  )
+  const recentTransactions = filteredTransactions.slice(0, 5)
+  const resetTransactionFilters = () => setTransactionFilters(initialTransactionFilters)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title={customer.fullName}
         description={customer.club || "Müşteri detayları"}
@@ -316,67 +492,76 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
         }
       />
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3 lg:w-[520px]">
           <TabsTrigger value="general">Genel Bilgiler</TabsTrigger>
           <TabsTrigger value="accounting">Cari Özet</TabsTrigger>
           <TabsTrigger value="transactions">Cari Hareketler</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="general" className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <TabsContent value="general" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_360px]">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">İletişim</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Müşteri Bilgileri</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.phoneNumber || "-"}</span>
+              <CardContent className="grid gap-3 text-sm md:grid-cols-2">
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+                    <Building2 className="h-4 w-4" />
+                    Firma
+                  </div>
+                  <p className="font-medium">{customer.club || "-"}</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    Yetkili
+                  </div>
+                  <p className="font-medium">{customer.sportsSchoolOfficial || customer.fullName || "-"}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+                    <Phone className="h-4 w-4" />
+                    Telefon
+                  </div>
+                  <p className="font-medium">{customer.phoneNumber || "-"}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    Konum
+                  </div>
+                  <p className="font-medium">
                     {customer.city}
                     {customer.district ? ` / ${customer.district}` : ""}
-                  </span>
+                  </p>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Firma</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <Building2 className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.club || "-"}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span>{customer.sportsSchoolOfficial || "-"}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base">Cari Durum</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="font-mono text-xl font-semibold">{formatCurrency(taxExcludedSummary.balance)}</p>
-                {getBalanceBadge(taxExcludedSummary.balance)}
+              <CardContent className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Kalan KDV hariç</p>
+                    <p className="font-mono text-2xl font-semibold">{formatCurrency(taxExcludedSummary.balance)}</p>
+                  </div>
+                  {getBalanceBadge(taxExcludedSummary.balance)}
+                </div>
                 <GrossAmountText label="Brüt/Yasal bakiye" value={summary.balance} />
               </CardContent>
             </Card>
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-base">Adres</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <p className="text-sm leading-relaxed text-muted-foreground">
                 {customer.address || "Adres bilgisi girilmemiş"}
               </p>
@@ -386,10 +571,10 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
           <CustomerNotes customer={customer} onNotesUpdate={loadData} />
         </TabsContent>
 
-        <TabsContent value="accounting" className="space-y-6">
+        <TabsContent value="accounting" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-red-100 p-2">
                     <TrendingUp className="h-5 w-5 text-red-600" />
@@ -406,7 +591,7 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
             </Card>
 
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-amber-100 p-2">
                     <Percent className="h-5 w-5 text-amber-600" />
@@ -421,7 +606,7 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
             </Card>
 
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="rounded-lg bg-muted p-2">
                     <Wallet className="h-5 w-5 text-muted-foreground" />
@@ -440,27 +625,44 @@ export function CustomerAdminDetailTabs({ customerId, initialTab }: Props) {
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Son Cari Hareketler</CardTitle>
+            <CardHeader className="pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base">Son Cari Hareketler</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => handleTabChange("transactions")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Tümünü Aç
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3 pt-0">
+              <TransactionFiltersToolbar
+                filters={transactionFilters}
+                transactionTypes={transactionTypes}
+                resultCount={filteredTransactions.length}
+                totalCount={accounting.transactions.length}
+                onChange={setTransactionFilters}
+                onReset={resetTransactionFilters}
+              />
               <TransactionTable transactions={recentTransactions} emptyText="Henüz cari hareket yok" />
             </CardContent>
           </Card>
-
-          <Button variant="outline" onClick={() => handleTabChange("transactions")}>
-            <FileText className="mr-2 h-4 w-4" />
-            Tüm Cari Hareketler
-          </Button>
         </TabsContent>
 
         <TabsContent value="transactions">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="text-base">Cari Hareketler</CardTitle>
             </CardHeader>
-            <CardContent>
-              <TransactionTable transactions={accounting.transactions} emptyText="İşlem bulunamadı" />
+            <CardContent className="space-y-3 pt-0">
+              <TransactionFiltersToolbar
+                filters={transactionFilters}
+                transactionTypes={transactionTypes}
+                resultCount={filteredTransactions.length}
+                totalCount={accounting.transactions.length}
+                onChange={setTransactionFilters}
+                onReset={resetTransactionFilters}
+              />
+              <TransactionTable transactions={filteredTransactions} emptyText="Filtreye uygun cari hareket bulunamadı" />
             </CardContent>
           </Card>
         </TabsContent>

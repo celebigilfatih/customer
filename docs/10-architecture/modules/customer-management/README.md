@@ -24,6 +24,7 @@ Accounting And Finance owns balances, account transactions, payments, and invoic
   - `general`: profile, contact, company, address, and notes.
   - `accounting`: accounting summary from `/api/accounting/customers/[id]`.
   - `transactions`: account transactions from `/api/accounting/customers/[id]`.
+- Customer detail may provide client-side search and filters over the already returned accounting transactions for operator navigation. These filters are read-only display helpers and must not recalculate or mutate ledger state.
 - The customer list must stay operationally focused and must not grow into a financial report. Financial detail belongs inside the customer detail tabs or Accounting And Finance reports.
 - The customer list may show a compact read-only accounting status summary for operator orientation. The values must come from Accounting And Finance records and must not create, mutate, or recalculate ledger state inside Customer Management.
 - Legacy customer routes under `/customers/*` redirect to the admin customer routes.

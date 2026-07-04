@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Activity,
   AlertTriangle,
@@ -16,15 +16,14 @@ import {
   ShoppingCart,
   Users,
   Wallet,
+  type LucideIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { EmptyState } from "@/components/empty-state"
 import { PageHeader } from "@/components/page-header"
 import { routes } from "@/lib/routes"
 
@@ -133,21 +132,24 @@ const totalReminders = (summary: DashboardSummary) =>
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index}>
-            <CardContent className="p-4">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="mt-4 h-8 w-20" />
-              <Skeleton className="mt-3 h-3 w-28" />
+    <div className="space-y-3">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_120px_120px]">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} className="gap-0 py-0">
+            <CardContent className="p-3">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="mt-3 h-6 w-16" />
             </CardContent>
           </Card>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Skeleton className="h-48 rounded-lg" />
-        <Skeleton className="h-48 rounded-lg lg:col-span-2" />
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <Skeleton className="h-44 rounded-lg" />
+        <Skeleton className="h-44 rounded-lg" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <Skeleton className="h-56 rounded-lg" />
+        <Skeleton className="h-56 rounded-lg" />
       </div>
     </div>
   )
@@ -178,16 +180,11 @@ export default function AdminDashboardPage() {
     fetchSummary()
   }, [])
 
-  const activeSubscriptionRatio = useMemo(() => {
-    if (!summary || summary.serviceSummary.subscriptions === 0) return 0
-    return Math.round((summary.serviceSummary.activeSubscriptions / summary.serviceSummary.subscriptions) * 100)
-  }, [summary])
-
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
-        title="Dashboard"
-        description="Bugünkü kararlar, uyarılar ve son hareketler."
+        title="Genel Bakış"
+        description="Bugün takip edilecek özetler ve hızlı aksiyonlar."
         breadcrumbs={[
           { label: "Admin", href: routes.admin.root },
           { label: "Dashboard" },
@@ -198,90 +195,41 @@ export default function AdminDashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Card>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="text-xs font-medium uppercase text-muted-foreground">Müşteri</p>
-                  <p className="mt-2 text-2xl font-semibold leading-none">{summary.metrics.customers}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Toplam kayıt</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-muted/40">
-                  <Users className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="text-xs font-medium uppercase text-muted-foreground">Bugünkü Tahsilat</p>
-                  <p className="mt-2 text-2xl font-semibold leading-none">{formatMoney(summary.finance.collectedToday)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{summary.finance.collectedToday.count} ödeme</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-blue-500/10">
-                  <Wallet className="h-5 w-5 text-blue-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="text-xs font-medium uppercase text-muted-foreground">Yakında Biten</p>
-                  <p className="mt-2 text-2xl font-semibold leading-none">{summary.metrics.upcomingExpirations}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">30 gün içinde</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-orange-500/10">
-                  <CalendarDays className="h-5 w-5 text-orange-600" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="flex items-center justify-between p-4">
-                <div>
-                  <p className="text-xs font-medium uppercase text-muted-foreground">Açık Teklif</p>
-                  <p className="mt-2 text-2xl font-semibold leading-none">{summary.metrics.openProposals}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{summary.serviceSummary.proposals} toplam teklif</p>
-                </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-md border bg-muted/40">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </CardContent>
-            </Card>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_120px_120px]">
+            <MetricTile
+              label="Bugünkü Tahsilat"
+              value={formatMoney(summary.finance.collectedToday)}
+              helper={`${summary.finance.collectedToday.count} ödeme`}
+              icon={Wallet}
+              tone="blue"
+            />
+            <MetricTile
+              label="Tahsil Edilecek"
+              value={formatMoney(summary.finance.open)}
+              helper={`${summary.finance.open.count} açık kayıt`}
+              icon={CreditCard}
+              tone="slate"
+            />
+            <MetricTile
+              label="Gecikmiş"
+              value={formatMoney(summary.finance.late)}
+              helper={`${summary.finance.late.count} gecikmiş`}
+              icon={AlertTriangle}
+              tone={summary.finance.late.count > 0 ? "red" : "slate"}
+            />
+            <MetricTile
+              label="Yakında Biten"
+              value={summary.metrics.upcomingExpirations.toString()}
+              helper="30 gün içinde"
+              icon={CalendarDays}
+              tone="orange"
+            />
+            <SmallMetric label="Müşteri" value={summary.metrics.customers} icon={Users} />
+            <SmallMetric label="Açık Teklif" value={summary.metrics.openProposals} icon={FileText} />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Plus className="h-4 w-4" />
-                  Hızlı İşlemler
-                </CardTitle>
-                <CardDescription>En sık kullanılan akışlar</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
-                <Button variant="outline" className="h-9 justify-start" onClick={() => router.push(routes.customers.add)}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Yeni Müşteri
-                </Button>
-                <Button variant="outline" className="h-9 justify-start" onClick={() => router.push(routes.admin.salesNew)}>
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Direkt Satış
-                </Button>
-                <Button variant="outline" className="h-9 justify-start" onClick={() => router.push("/admin/proposals/add")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Yeni Teklif
-                </Button>
-                <Button variant="outline" className="h-9 justify-start" onClick={() => router.push(routes.admin.finance)}>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Tahsilatlar
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <Card className="gap-0 py-0">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   {totalReminders(summary) > 0 ? (
@@ -289,65 +237,72 @@ export default function AdminDashboardPage() {
                   ) : (
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   )}
-                  Bugünkü Uyarılar
+                  Bugünkü İş Listesi
                 </CardTitle>
-                <CardDescription>Bugün aksiyon gerektiren kayıtlar</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-2 pt-0">
                 {totalReminders(summary) === 0 ? (
-                  <EmptyState
-                    icon={CheckCircle2}
-                    title="Bugün için uyarı yok"
-                    description="Tahsilat, yenileme ve bitiş kayıtları güncel görünüyor."
-                    className="border-0 p-4"
-                  />
-                ) : (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <ReminderRow
-                      label="Vadesi gelen ödeme"
-                      count={summary.reminders.paymentsDueToday}
-                      href={routes.admin.finance}
-                    />
-                    <ReminderRow
-                      label="Domain yenileme"
-                      count={summary.reminders.domainsRenewToday}
-                      href={routes.admin.domains}
-                    />
-                    <ReminderRow
-                      label="Abonelik bitişi"
-                      count={summary.reminders.subscriptionsExpireToday}
-                      href={routes.admin.subscriptions}
-                    />
-                    <ReminderRow
-                      label="Hosting bitişi"
-                      count={summary.reminders.hostingExpireToday}
-                      href={routes.admin.hosting}
-                    />
+                  <div className="flex items-center gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>Bugün için vade, yenileme veya bitiş uyarısı yok.</span>
                   </div>
-                )}
+                ) : null}
+                <div className="grid gap-2 md:grid-cols-2">
+                  <ReminderRow
+                    label="Vadesi gelen ödeme"
+                    count={summary.reminders.paymentsDueToday}
+                    href={routes.admin.finance}
+                  />
+                  <ReminderRow
+                    label="Domain yenileme"
+                    count={summary.reminders.domainsRenewToday}
+                    href={routes.admin.domains}
+                  />
+                  <ReminderRow
+                    label="Abonelik bitişi"
+                    count={summary.reminders.subscriptionsExpireToday}
+                    href={routes.admin.subscriptions}
+                  />
+                  <ReminderRow
+                    label="Hosting bitişi"
+                    count={summary.reminders.hostingExpireToday}
+                    href={routes.admin.hosting}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="gap-0 py-0">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Plus className="h-4 w-4" />
+                  Hızlı İşlemler
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-2 pt-0">
+                <QuickAction icon={Plus} label="Yeni Müşteri" onClick={() => router.push(routes.customers.add)} />
+                <QuickAction icon={ShoppingCart} label="Yeni Satış" onClick={() => router.push(routes.admin.salesNew)} />
+                <QuickAction icon={FileText} label="Yeni Teklif" onClick={() => router.push("/admin/proposals/add")} />
+                <QuickAction icon={CreditCard} label="Tahsilatlar" onClick={() => router.push(routes.admin.finance)} />
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+          <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
+            <Card className="gap-0 py-0">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4" />
                   Son Aktiviteler
                 </CardTitle>
-                <CardDescription>Tahsilat, teklif ve süreli hizmet hareketleri</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {summary.recentActivities.length === 0 ? (
-                  <EmptyState
-                    icon={Activity}
-                    title="Henüz aktivite yok"
-                    description="Yeni kayıtlar burada görünecek."
-                    className="border-0 p-4"
-                  />
+                  <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+                    Henüz aktivite yok. Yeni kayıtlar burada görünecek.
+                  </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="divide-y rounded-md border">
                     {summary.recentActivities.map((activity) => {
                       const Icon = activityIcons[activity.kind]
                       return (
@@ -355,11 +310,11 @@ export default function AdminDashboardPage() {
                           key={activity.id}
                           type="button"
                           onClick={() => router.push(activity.href)}
-                          className="flex w-full items-center justify-between rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40"
+                          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
                         >
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border bg-background">
-                              <Icon className="h-4 w-4 text-muted-foreground" />
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-muted/30">
+                              <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                             </div>
                             <div className="min-w-0">
                               <p className="truncate text-sm font-medium">{activity.title}</p>
@@ -368,7 +323,7 @@ export default function AdminDashboardPage() {
                               </p>
                             </div>
                           </div>
-                          <Badge variant="outline" className="ml-3 shrink-0">
+                          <Badge variant="outline" className="shrink-0 font-normal">
                             {formatDate(activity.createdAt)}
                           </Badge>
                         </button>
@@ -379,36 +334,28 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="gap-0 py-0">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Repeat className="h-4 w-4" />
                   Süreli Hizmet Özeti
                 </CardTitle>
-                <CardDescription>Aktif kayıtların kısa görünümü</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Aktif abonelik</span>
-                    <span className="font-medium">%{activeSubscriptionRatio}</span>
-                  </div>
-                  <Progress value={activeSubscriptionRatio} className="mt-2 h-1" />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
+              <CardContent className="space-y-3 pt-0">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                   <SummaryTile icon={Repeat} label="Abonelik" value={summary.serviceSummary.subscriptions} />
                   <SummaryTile icon={Globe} label="Domain" value={summary.serviceSummary.domains} />
                   <SummaryTile icon={Server} label="Hosting" value={summary.serviceSummary.hosting} />
                   <SummaryTile icon={FileText} label="Teklif" value={summary.serviceSummary.proposals} />
                 </div>
                 {summary.upcomingExpirations.length > 0 && (
-                  <div className="space-y-2 border-t pt-3">
+                  <div className="space-y-1 border-t pt-2">
                     {summary.upcomingExpirations.map((item) => (
                       <button
                         key={`${item.kind}-${item.id}`}
                         type="button"
                         onClick={() => router.push(item.href)}
-                        className="flex w-full items-center justify-between gap-3 rounded-md px-1 py-1.5 text-left text-sm hover:bg-muted/40"
+                        className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/40"
                       >
                         <span className="truncate">{item.label}</span>
                         <span className="shrink-0 text-xs text-muted-foreground">{formatDate(item.date)}</span>
@@ -425,6 +372,67 @@ export default function AdminDashboardPage() {
   )
 }
 
+type MetricTone = "blue" | "orange" | "red" | "slate"
+
+const metricToneClassNames: Record<MetricTone, string> = {
+  blue: "bg-blue-50 text-blue-700 border-blue-100",
+  orange: "bg-orange-50 text-orange-700 border-orange-100",
+  red: "bg-red-50 text-red-700 border-red-100",
+  slate: "bg-muted/40 text-muted-foreground border-border",
+}
+
+function MetricTile({
+  label,
+  value,
+  helper,
+  icon: Icon,
+  tone,
+}: {
+  label: string
+  value: string
+  helper: string
+  icon: LucideIcon
+  tone: MetricTone
+}) {
+  return (
+    <Card className="gap-0 py-0">
+      <CardContent className="flex items-center justify-between gap-3 p-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase leading-tight text-muted-foreground">{label}</p>
+          <p className="mt-1 truncate text-xl font-semibold leading-none">{value}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{helper}</p>
+        </div>
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border ${metricToneClassNames[tone]}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SmallMetric({ label, value, icon: Icon }: { label: string; value: number; icon: LucideIcon }) {
+  return (
+    <Card className="gap-0 py-0">
+      <CardContent className="flex h-full items-center gap-2 p-3">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="min-w-0">
+          <p className="text-lg font-semibold leading-none">{value}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{label}</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <Button variant="outline" className="h-9 justify-start gap-2 px-3" onClick={onClick}>
+      <Icon className="h-4 w-4" />
+      {label}
+    </Button>
+  )
+}
+
 function ReminderRow({ label, count, href }: { label: string; count: number; href: string }) {
   const router = useRouter()
 
@@ -432,13 +440,20 @@ function ReminderRow({ label, count, href }: { label: string; count: number; hre
     <button
       type="button"
       onClick={() => router.push(href)}
-      className="flex items-center justify-between rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40"
+      className="flex items-center justify-between gap-3 rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40"
     >
       <div>
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{count} kayıt</p>
       </div>
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center gap-2">
+        {count > 0 ? (
+          <Badge className="bg-orange-500 hover:bg-orange-600">{count}</Badge>
+        ) : (
+          <Badge variant="outline" className="font-normal">0</Badge>
+        )}
+        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      </div>
     </button>
   )
 }
@@ -448,17 +463,17 @@ function SummaryTile({
   label,
   value,
 }: {
-  icon: typeof Repeat
+  icon: LucideIcon
   label: string
   value: number
 }) {
   return (
-    <div className="rounded-md border bg-muted/20 p-3">
-      <div className="flex items-center gap-2">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">{label}</span>
+    <div className="min-w-0 rounded-md border bg-muted/20 p-2.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="truncate text-xs text-muted-foreground">{label}</span>
       </div>
-      <p className="mt-2 text-xl font-semibold leading-none">{value}</p>
+      <p className="mt-1.5 text-lg font-semibold leading-none">{value}</p>
     </div>
   )
 }

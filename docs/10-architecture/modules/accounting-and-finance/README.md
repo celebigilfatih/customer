@@ -61,6 +61,7 @@ When opened for a specific customer, the manual collection form locks the custom
   - Invoice-linked transactions use the invoice `subtotal / total` ratio for tax-excluded display values. Transactions without invoice tax detail fall back to their recorded ledger amount.
   - Invoice-linked transactions return `displayDescription` from invoice items using domain, hosting, catalog service/product, or item description labels, while preserving the original ledger `description`.
   - Customer detail accounting summary cards are outstanding-balance focused: they show tax-excluded remaining debt, remaining tax (`balance - taxExcludedBalance`), and gross/legal remaining balance. Lifetime debit and credit totals remain available for audit/detail views but must not be used as the primary receivable summary.
+  - Customer detail search and filter controls operate on the returned transaction list as a read-only UI convenience. They do not change ledger ordering, running balances, or server-side financial state.
 
 - `/api/invoices`
   - `ADMIN` or `SUPPORT` only.

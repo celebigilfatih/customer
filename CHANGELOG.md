@@ -24,6 +24,9 @@ All notable repository changes should be documented here.
 - Added stronger receivable color and icon emphasis to the customer-scoped manual collection screen.
 - Locked customer selection on customer-scoped manual collection so operators cannot accidentally switch customers after entering from customer detail.
 - Refined customer accounting summary cards to show outstanding KDV-excluded balance, remaining KDV, and gross/legal remaining balance instead of lifetime debit and credit totals.
+- Refined the customer detail page with a more compact information layout and added read-only search/type/direction/date filters for customer accounting transactions.
+- Refined `/admin/dashboard` into a compact balanced overview with a daily summary band, today's work list, smaller quick actions, denser recent activity, and lower-height service totals.
+- Balanced the `/admin/dashboard` lower section so recent activity and service totals share a two-column row on desktop.
 
 ### Fixed
 
