@@ -26,7 +26,14 @@ All notable repository changes should be documented here.
 - Refined customer accounting summary cards to show outstanding KDV-excluded balance, remaining KDV, and gross/legal remaining balance instead of lifetime debit and credit totals.
 - Refined the customer detail page with a more compact information layout and added read-only search/type/direction/date filters for customer accounting transactions.
 - Refined `/admin/dashboard` into a compact balanced overview with a daily summary band, today's work list, smaller quick actions, denser recent activity, and lower-height service totals.
-- Balanced the `/admin/dashboard` lower section so recent activity and service totals share a two-column row on desktop.
+- Balanced the `/admin/dashboard` service summary as a full-width row with compact inline total cards.
+- Tightened `/admin/dashboard` card spacing for a more consistent compact rhythm.
+- Reduced the `/admin/dashboard` today's work list row padding and inner gaps for a lower-height card.
+- Aligned `/admin/dashboard` quick action and recent activity card spacing with the today's work list readability rhythm.
+- Aligned `/admin/dashboard` service summary spacing and inline total cards with the refreshed card rhythm.
+- Placed `/admin/dashboard` recent activity and service summary cards side by side on desktop while preserving stacked mobile layout.
+- Stacked the `/admin/dashboard` service summary total cards vertically inside the side-by-side dashboard section.
+- Reordered `/admin/dashboard` service summary rows so labels sit on the left and totals on the right.
 
 ### Fixed
 

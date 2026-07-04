@@ -132,7 +132,7 @@ const totalReminders = (summary: DashboardSummary) =>
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[repeat(4,minmax(0,1fr))_120px_120px]">
         {Array.from({ length: 6 }).map((_, index) => (
           <Card key={index} className="gap-0 py-0">
@@ -143,11 +143,11 @@ function DashboardSkeleton() {
           </Card>
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1fr)_280px]">
         <Skeleton className="h-44 rounded-lg" />
         <Skeleton className="h-44 rounded-lg" />
       </div>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-2">
         <Skeleton className="h-56 rounded-lg" />
         <Skeleton className="h-56 rounded-lg" />
       </div>
@@ -181,7 +181,7 @@ export default function AdminDashboardPage() {
   }, [])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <PageHeader
         title="Genel Bakış"
         description="Bugün takip edilecek özetler ve hızlı aksiyonlar."
@@ -228,9 +228,9 @@ export default function AdminDashboardPage() {
             <SmallMetric label="Açık Teklif" value={summary.metrics.openProposals} icon={FileText} />
           </div>
 
-          <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="grid grid-cols-1 items-start gap-2 lg:grid-cols-[minmax(0,1fr)_280px]">
             <Card className="gap-0 py-0">
-              <CardHeader className="pb-3">
+              <CardHeader className="px-4 pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2 text-base">
                   {totalReminders(summary) > 0 ? (
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -240,14 +240,14 @@ export default function AdminDashboardPage() {
                   Bugünkü İş Listesi
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 pt-0">
+              <CardContent className="space-y-3 px-4 pb-4 pt-0">
                 {totalReminders(summary) === 0 ? (
-                  <div className="flex items-center gap-3 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                  <div className="flex items-center gap-3 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span>Bugün için vade, yenileme veya bitiş uyarısı yok.</span>
                   </div>
                 ) : null}
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-3 md:grid-cols-2">
                   <ReminderRow
                     label="Vadesi gelen ödeme"
                     count={summary.reminders.paymentsDueToday}
@@ -273,13 +273,13 @@ export default function AdminDashboardPage() {
             </Card>
 
             <Card className="gap-0 py-0">
-              <CardHeader className="pb-3">
+              <CardHeader className="px-4 pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Plus className="h-4 w-4" />
                   Hızlı İşlemler
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid gap-2 pt-0">
+              <CardContent className="grid gap-3 px-4 pb-4 pt-0">
                 <QuickAction icon={Plus} label="Yeni Müşteri" onClick={() => router.push(routes.customers.add)} />
                 <QuickAction icon={ShoppingCart} label="Yeni Satış" onClick={() => router.push(routes.admin.salesNew)} />
                 <QuickAction icon={FileText} label="Yeni Teklif" onClick={() => router.push("/admin/proposals/add")} />
@@ -290,15 +290,15 @@ export default function AdminDashboardPage() {
 
           <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
             <Card className="gap-0 py-0">
-              <CardHeader className="pb-3">
+              <CardHeader className="px-4 pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Activity className="h-4 w-4" />
                   Son Aktiviteler
                 </CardTitle>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="px-4 pb-4 pt-0">
                 {summary.recentActivities.length === 0 ? (
-                  <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+                  <div className="rounded-md border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
                     Henüz aktivite yok. Yeni kayıtlar burada görünecek.
                   </div>
                 ) : (
@@ -310,15 +310,15 @@ export default function AdminDashboardPage() {
                           key={activity.id}
                           type="button"
                           onClick={() => router.push(activity.href)}
-                          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+                          className="flex min-h-16 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
                         >
                           <div className="flex min-w-0 items-center gap-2.5">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-muted/30">
                               <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                             </div>
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-medium">{activity.title}</p>
-                              <p className="truncate text-xs text-muted-foreground">
+                              <p className="truncate text-sm font-semibold leading-snug">{activity.title}</p>
+                              <p className="mt-1 truncate text-xs leading-snug text-muted-foreground">
                                 {activityLabels[activity.kind]} · {activity.description}
                               </p>
                             </div>
@@ -335,27 +335,27 @@ export default function AdminDashboardPage() {
             </Card>
 
             <Card className="gap-0 py-0">
-              <CardHeader className="pb-3">
+              <CardHeader className="px-4 pb-3 pt-4">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Repeat className="h-4 w-4" />
                   Süreli Hizmet Özeti
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <CardContent className="space-y-3 px-4 pb-4 pt-0">
+                <div className="grid grid-cols-1 gap-3">
                   <SummaryTile icon={Repeat} label="Abonelik" value={summary.serviceSummary.subscriptions} />
                   <SummaryTile icon={Globe} label="Domain" value={summary.serviceSummary.domains} />
                   <SummaryTile icon={Server} label="Hosting" value={summary.serviceSummary.hosting} />
                   <SummaryTile icon={FileText} label="Teklif" value={summary.serviceSummary.proposals} />
                 </div>
                 {summary.upcomingExpirations.length > 0 && (
-                  <div className="space-y-1 border-t pt-2">
+                  <div className="space-y-2 border-t pt-3">
                     {summary.upcomingExpirations.map((item) => (
                       <button
                         key={`${item.kind}-${item.id}`}
                         type="button"
                         onClick={() => router.push(item.href)}
-                        className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted/40"
+                        className="flex min-h-10 w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted/40"
                       >
                         <span className="truncate">{item.label}</span>
                         <span className="shrink-0 text-xs text-muted-foreground">{formatDate(item.date)}</span>
@@ -426,7 +426,7 @@ function SmallMetric({ label, value, icon: Icon }: { label: string; value: numbe
 
 function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <Button variant="outline" className="h-9 justify-start gap-2 px-3" onClick={onClick}>
+    <Button variant="outline" className="h-10 justify-start gap-2 px-3 font-semibold" onClick={onClick}>
       <Icon className="h-4 w-4" />
       {label}
     </Button>
@@ -440,11 +440,11 @@ function ReminderRow({ label, count, href }: { label: string; count: number; hre
     <button
       type="button"
       onClick={() => router.push(href)}
-      className="flex items-center justify-between gap-3 rounded-md border bg-muted/20 p-3 text-left transition-colors hover:bg-muted/40"
+      className="flex min-h-16 items-center justify-between gap-3 rounded-md border bg-muted/20 px-4 py-3 text-left transition-colors hover:bg-muted/40"
     >
       <div>
-        <p className="text-sm font-medium">{label}</p>
-        <p className="text-xs text-muted-foreground">{count} kayıt</p>
+        <p className="text-sm font-semibold leading-snug">{label}</p>
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">{count} kayıt</p>
       </div>
       <div className="flex items-center gap-2">
         {count > 0 ? (
@@ -468,12 +468,12 @@ function SummaryTile({
   value: number
 }) {
   return (
-    <div className="min-w-0 rounded-md border bg-muted/20 p-2.5">
+    <div className="flex min-h-12 min-w-0 items-center justify-between gap-3 rounded-md border bg-muted/20 px-4 py-3">
       <div className="flex min-w-0 items-center gap-2">
         <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="truncate text-xs text-muted-foreground">{label}</span>
+        <span className="truncate text-xs leading-snug text-muted-foreground">{label}</span>
       </div>
-      <p className="mt-1.5 text-lg font-semibold leading-none">{value}</p>
+      <p className="shrink-0 text-lg font-semibold leading-none">{value}</p>
     </div>
   )
 }
