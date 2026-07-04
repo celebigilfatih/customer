@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Domain } from "@/generated/prisma"
 import { routes } from "@/lib/routes"
-import { AlertTriangle, ChevronLeft, ChevronRight, Filter, Pencil, RefreshCw, Search, Trash2 } from "lucide-react"
+import { AlertTriangle, CalendarClock, ChevronLeft, ChevronRight, FileText, Filter, Globe, Pencil, RefreshCw, Search, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface Props {
@@ -19,8 +19,15 @@ interface Props {
 
 type SimpleCustomer = { id: string; fullName: string; club?: string | null }
 type CustomersResponse = { data?: SimpleCustomer[] }
+type DomainSummary = {
+  total: number
+  expiringSoon: number
+  expired: number
+  linkedInvoice: number
+}
 type DomainListItem = Domain & {
   customer?: SimpleCustomer | null
+  invoice?: { id: string; number: string } | null
 }
 
 const ALL_CUSTOMERS_VALUE = "__all_customers"
@@ -32,6 +39,7 @@ export function DomainList({ onAdd }: Props) {
   const [limit, setLimit] = useState(10)
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
+  const [summary, setSummary] = useState<DomainSummary>({ total: 0, expiringSoon: 0, expired: 0, linkedInvoice: 0 })
   const [search, setSearch] = useState("")
   const [customerId, setCustomerId] = useState(ALL_CUSTOMERS_VALUE)
   const [loading, setLoading] = useState(false)
@@ -53,6 +61,7 @@ export function DomainList({ onAdd }: Props) {
       setItems(data.data || [])
       setTotal(data.pagination?.total || 0)
       setTotalPages(data.pagination?.totalPages || 1)
+      setSummary(data.summary || { total: data.pagination?.total || 0, expiringSoon: 0, expired: 0, linkedInvoice: 0 })
     } catch {
       toast.error("Domainler yüklenemedi")
     } finally {
@@ -130,6 +139,37 @@ export function DomainList({ onAdd }: Props) {
   return (
     <div className="space-y-3">
       <Card className="rounded-lg py-0">
+        <CardContent className="grid gap-0 p-0 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Toplam", value: summary.total, helper: "domain", icon: Globe },
+            { label: "Yakında Yenilenecek", value: summary.expiringSoon, helper: "30 gün içinde", icon: CalendarClock },
+            { label: "Süresi Geçmiş", value: summary.expired, helper: "yenileme bekler", icon: AlertTriangle },
+            { label: "Faturalı", value: summary.linkedInvoice, helper: "satıştan gelen", icon: FileText },
+          ].map((stat, index) => {
+            const Icon = stat.icon
+            return (
+              <div
+                key={stat.label}
+                className={[
+                  "flex min-h-16 items-center justify-between gap-3 border-b px-4 py-2.5 xl:border-b-0 xl:border-r xl:last:border-r-0",
+                  index >= 2 ? "sm:border-b-0" : "",
+                ].join(" ")}
+              >
+                <div>
+                  <div className="text-xs font-medium uppercase text-muted-foreground">{stat.label}</div>
+                  <div className="mt-0.5 text-lg font-semibold tracking-tight">{stat.value}</div>
+                  <div className="text-xs text-muted-foreground">{stat.helper}</div>
+                </div>
+                <div className="flex h-8 w-8 items-center justify-center rounded-md border bg-muted/30">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-lg py-0">
         <CardContent className="p-3">
           <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
             <div className="flex h-9 shrink-0 items-center gap-2 px-1 text-sm font-medium">
@@ -204,20 +244,28 @@ export function DomainList({ onAdd }: Props) {
               <TableHead>Müşteri</TableHead>
               <TableHead>Kayıt</TableHead>
               <TableHead>Yenileme</TableHead>
+              <TableHead>Kaynak</TableHead>
               <TableHead className="w-[96px] text-right">İşlem</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
                   Domainler yükleniyor...
                 </TableCell>
               </TableRow>
             )}
-            {!loading && items.map((d) => (
+            {!loading && items.map((d) => {
+              const days = getRemainingDays(d.renewDate)
+              return (
               <TableRow key={d.id}>
-                <TableCell className="font-medium">{d.name}</TableCell>
+                <TableCell>
+                  <div className="min-w-44">
+                    <div className="font-medium">{d.name}</div>
+                    <div className="text-xs text-muted-foreground">ID: {d.id.slice(0, 8)}</div>
+                  </div>
+                </TableCell>
                 <TableCell>
                   {d.customer ? (
                     <Link
@@ -234,7 +282,17 @@ export function DomainList({ onAdd }: Props) {
                   )}
                 </TableCell>
                 <TableCell>{d.registerDate ? new Date(d.registerDate).toLocaleDateString("tr-TR") : '-'}</TableCell>
-                <TableCell>{new Date(d.renewDate).toLocaleDateString("tr-TR")}</TableCell>
+                <TableCell>
+                  <div className="font-medium">{new Date(d.renewDate).toLocaleDateString("tr-TR")}</div>
+                  <div className={getRemainingClassName(days)}>{formatRemainingDays(days)}</div>
+                </TableCell>
+                <TableCell>
+                  {d.invoice ? (
+                    <span className="text-sm text-muted-foreground">{d.invoice.number}</span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Manuel</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(d)} className="h-8 w-8" aria-label="Domain düzenle">
@@ -246,10 +304,11 @@ export function DomainList({ onAdd }: Props) {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
             {items.length === 0 && !loading && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-gray-500 py-6">
+                <TableCell colSpan={6} className="text-center text-gray-500 py-6">
                   <div className="flex flex-col items-center gap-3">
                     <span>Kayıt bulunamadı</span>
                     {onAdd ? (
@@ -313,6 +372,26 @@ export function DomainList({ onAdd }: Props) {
       </Dialog>
     </div>
   )
+}
+
+function getRemainingDays(value: Date | string) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const renewDate = new Date(value)
+  renewDate.setHours(0, 0, 0, 0)
+  return Math.ceil((renewDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+function formatRemainingDays(days: number) {
+  if (days < 0) return `${Math.abs(days)} gün gecikti`
+  if (days === 0) return "Bugün yenileniyor"
+  return `${days} gün kaldı`
+}
+
+function getRemainingClassName(days: number) {
+  if (days < 0) return "text-xs font-medium text-destructive"
+  if (days <= 30) return "text-xs font-medium text-amber-600"
+  return "text-xs text-muted-foreground"
 }
 
 function DomainEditForm({ domain, customers, onSuccess }: { domain: Domain; customers: SimpleCustomer[]; onSuccess: () => void }) {

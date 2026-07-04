@@ -40,10 +40,11 @@ The server is authoritative for totals and performs the sale inside one database
    - `CREDIT`: `ISSUED`
    - `PARTIAL`: `PARTIAL`
    - `PAID`: `PAID`
-6. Create `INVOICE_DEBT` through the accounting ledger helper.
-7. Decrement stock-tracked product stock with an atomic stock-quantity check.
-8. Create `OUT` stock movements for stock-tracked product lines.
-9. If payment was collected, create one `PAID` payment linked to the invoice and synchronize one `PAYMENT_CREDIT`.
+6. Activate the customer when its lifecycle status is still `POTENTIAL`.
+7. Create `INVOICE_DEBT` through the accounting ledger helper.
+8. Decrement stock-tracked product stock with an atomic stock-quantity check.
+9. Create `OUT` stock movements for stock-tracked product lines.
+10. If payment was collected, create one `PAID` payment linked to the invoice and synchronize one `PAYMENT_CREDIT`.
 
 If any stock check fails, the transaction rolls back. No invoice, payment, account transaction, or stock movement is committed.
 
@@ -56,6 +57,7 @@ Proposal approval is not a financial event. `/api/proposals/[id]/approve` now ch
 ## Consequences
 
 - Operators have a single direct-sale entry point instead of stitching invoices, stock, and payments together manually.
+- A customer with a successful sale is no longer treated as a potential customer unless an operator later deliberately changes its lifecycle status.
 - Client components must not create secondary financial records for direct-sale completion.
 - Retrying the same direct-sale request with the same `idempotencyKey` is safe.
 - Proposal approval no longer reserves stock or creates customer receivables.
@@ -69,6 +71,7 @@ Proposal approval is not a financial event. `/api/proposals/[id]/approve` now ch
 - A linked paid payment must have exactly one `PAYMENT_CREDIT`.
 - Stock-tracked `PRODUCT` direct-sale lines must have committed stock movements only when the invoice transaction commits.
 - Customer running balance must equal `sum(debit) - sum(credit)` after direct sale.
+- A successful direct sale may transition customer status from `POTENTIAL` to `ACTIVE`; it must not silently reopen `INACTIVE` or `LOST` customers.
 
 ## Rollback
 

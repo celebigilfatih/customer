@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import {
+  CustomerStatus,
   InvoiceStatus,
   InvoiceType,
   PaymentStatus,
@@ -251,6 +252,16 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       })
       if (!customer) throw new DirectSaleError(404, "Müşteri bulunamadı")
+
+      await tx.customer.updateMany({
+        where: {
+          id: input.customerId,
+          status: CustomerStatus.POTENTIAL,
+        },
+        data: {
+          status: CustomerStatus.ACTIVE,
+        },
+      })
 
       const productIds = Array.from(
         new Set(input.items.map((item) => item.productId).filter((id): id is string => Boolean(id)))

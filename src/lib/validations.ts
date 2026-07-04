@@ -68,7 +68,7 @@ export const customerFiltersSchema = z.object({
   city: z.string().max(50).optional(),
   district: z.string().max(50).optional(),
   club: z.string().max(100).optional(),
-  status: z.enum(['POTENTIAL', 'CONTACTED', 'INTERESTED', 'CONVERTED', 'REJECTED', 'SOLD']).optional(),
+  status: z.enum(['POTENTIAL', 'ACTIVE', 'INACTIVE', 'LOST']).optional(),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(10)
 })

@@ -25,7 +25,15 @@ Accounting And Finance owns balances, account transactions, payments, and invoic
   - `accounting`: accounting summary from `/api/accounting/customers/[id]`.
   - `transactions`: account transactions from `/api/accounting/customers/[id]`.
 - The customer list must stay operationally focused and must not grow into a financial report. Financial detail belongs inside the customer detail tabs or Accounting And Finance reports.
+- The customer list may show a compact read-only accounting status summary for operator orientation. The values must come from Accounting And Finance records and must not create, mutate, or recalculate ledger state inside Customer Management.
 - Legacy customer routes under `/customers/*` redirect to the admin customer routes.
+
+## Lifecycle Status Rules
+
+- New customers default to `POTENTIAL`.
+- A successful direct sale activates a customer by changing `POTENTIAL` to `ACTIVE` inside the same server-side transaction as the sale.
+- Direct sale activation must not silently reopen customers deliberately marked `INACTIVE` or `LOST`.
+- Customer status is lifecycle metadata owned by Customer Management. Sales flows may request the documented activation transition, but they must not infer or mutate financial state.
 
 ## Accounting Route Compatibility
 

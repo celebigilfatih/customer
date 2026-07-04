@@ -31,6 +31,8 @@ Customer receivable details are displayed inside the unified customer detail rou
 
 The standalone accounting customer list is not a primary navigation surface. Legacy accounting customer URLs redirect to the unified customer detail route, while Accounting And Finance remains the owner of the backing balance and transaction APIs.
 
+`/admin/finance/add` is a manual collection surface, not a sale surface. It records received money as a paid payment and must not create invoices, domain records, hosting records, stock movements, supplier purchases, or sale line items. Operators must use `/admin/sales/new` when a new sale needs to create those source records.
+
 ## Current Server-Side Contracts
 
 - `/api/payments`

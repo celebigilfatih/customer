@@ -21,8 +21,11 @@ import {
   Eye,
   Users,
   Building2,
+  Contact,
   Phone,
   MapPin,
+  WalletCards,
+  BadgeCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/empty-state";
@@ -182,6 +185,12 @@ export function CustomerList({
                       </TableHead>
                       <TableHead className="font-semibold">
                         <div className="flex items-center gap-2">
+                          <Contact className="h-4 w-4 text-muted-foreground" />
+                          Yetkili
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold">
+                        <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
                           Telefon
                         </div>
@@ -190,6 +199,18 @@ export function CustomerList({
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-muted-foreground" />
                           Konum
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold">
+                        <div className="flex items-center gap-2">
+                          <BadgeCheck className="h-4 w-4 text-muted-foreground" />
+                          Durum / Kayıt
+                        </div>
+                      </TableHead>
+                      <TableHead className="font-semibold">
+                        <div className="flex items-center gap-2">
+                          <WalletCards className="h-4 w-4 text-muted-foreground" />
+                          Cari Özet
                         </div>
                       </TableHead>
                       <TableHead className="font-semibold text-right">
@@ -207,6 +228,24 @@ export function CustomerList({
                           "tr",
                           { sensitivity: "base" },
                         ) !== 0;
+                      const summary = customer.accountingSummary || {
+                        totalDebit: 0,
+                        totalCredit: 0,
+                        balance: 0,
+                      };
+                      const balanceStatus =
+                        summary.balance > 0
+                          ? "Borçlu"
+                          : summary.balance < 0
+                            ? "Alacaklı"
+                            : "Kapalı";
+                      const balanceClassName =
+                        summary.balance > 0
+                          ? "text-destructive"
+                          : summary.balance < 0
+                            ? "text-emerald-700"
+                            : "text-muted-foreground";
+                      const statusMeta = getCustomerStatusMeta(customer.status);
 
                       return (
                         <TableRow
@@ -230,6 +269,15 @@ export function CustomerList({
                               </div>
                             </div>
                           </TableCell>
+                          <TableCell>
+                            {customer.sportsSchoolOfficial?.trim() ? (
+                              <div className="max-w-44 truncate text-sm">
+                                {customer.sportsSchoolOfficial}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {customer.phoneNumber || "-"}
                           </TableCell>
@@ -246,6 +294,32 @@ export function CustomerList({
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex min-w-28 flex-col gap-1 text-sm">
+                              <span className={`w-fit rounded-full border px-2 py-0.5 text-xs font-medium ${statusMeta.className}`}>
+                                {statusMeta.label}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(customer.createdAt)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="min-w-40 text-sm">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className={`font-mono font-semibold ${balanceClassName}`}>
+                                  {formatCurrency(Math.abs(summary.balance))}
+                                </span>
+                                <span className="rounded-full border px-1.5 py-0.5 text-xs font-medium text-muted-foreground">
+                                  {balanceStatus}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                                <span>Borç {formatCurrency(summary.totalDebit)}</span>
+                                <span>Alacak {formatCurrency(summary.totalCredit)}</span>
+                              </div>
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
@@ -325,4 +399,31 @@ export function CustomerList({
       </div>
     </div>
   );
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency: "TRY",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatDate(value: Date | string) {
+  return new Date(value).toLocaleDateString("tr-TR");
+}
+
+function getCustomerStatusMeta(status: CustomerListItem["status"]) {
+  switch (status) {
+    case "ACTIVE":
+      return { label: "Aktif", className: "border-emerald-200 bg-emerald-50 text-emerald-700" };
+    case "INACTIVE":
+      return { label: "Pasif", className: "border-slate-200 bg-slate-50 text-slate-600" };
+    case "LOST":
+      return { label: "Kayıp", className: "border-red-200 bg-red-50 text-red-700" };
+    case "POTENTIAL":
+    default:
+      return { label: "Potansiyel", className: "border-amber-200 bg-amber-50 text-amber-700" };
+  }
 }

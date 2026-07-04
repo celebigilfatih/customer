@@ -4,9 +4,23 @@ export type CustomerWithNotes = Customer & {
   notes: Note[]
 }
 
-export type CustomerListItem = Pick<Customer, 
-  'id' | 'fullName' | 'phoneNumber' | 'club' | 'city' | 'district'
->
+export type CustomerListItem = Pick<Customer,
+  | 'id'
+  | 'fullName'
+  | 'phoneNumber'
+  | 'club'
+  | 'city'
+  | 'district'
+  | 'sportsSchoolOfficial'
+  | 'status'
+  | 'createdAt'
+> & {
+  accountingSummary?: {
+    totalDebit: number
+    totalCredit: number
+    balance: number
+  }
+}
 
 export interface PaginatedResponse<T> {
   data: T[]

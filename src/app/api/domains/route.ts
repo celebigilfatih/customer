@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { Prisma } from '@/generated/prisma'
 import { domainCreateSchema } from '@/lib/validations'
 import { handleApiError, sanitizeInput } from '@/lib/error-handler'
 
@@ -19,10 +20,17 @@ export async function GET(request: NextRequest) {
         customerId ? { customerId } : {},
       ].filter((c) => Object.keys(c).length > 0),
     }
+    const baseWhere: Prisma.DomainWhereInput | undefined = Object.keys(where.AND).length > 0 ? where : undefined
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const thirtyDaysLater = new Date(today)
+    thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30)
+    const withBaseWhere = (extra: Prisma.DomainWhereInput): Prisma.DomainWhereInput =>
+      baseWhere ? { AND: [baseWhere, extra] } : extra
 
-    const [items, total] = await Promise.all([
+    const [items, total, expiringSoon, expired, linkedInvoice] = await Promise.all([
       prisma.domain.findMany({
-        where: Object.keys(where.AND).length > 0 ? where : undefined,
+        where: baseWhere,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -34,16 +42,32 @@ export async function GET(request: NextRequest) {
               fullName: true,
             },
           },
+          invoice: {
+            select: {
+              id: true,
+              number: true,
+            },
+          },
         },
       }),
       prisma.domain.count({
-        where: Object.keys(where.AND).length > 0 ? where : undefined,
+        where: baseWhere,
+      }),
+      prisma.domain.count({
+        where: withBaseWhere({ renewDate: { gte: today, lte: thirtyDaysLater } }),
+      }),
+      prisma.domain.count({
+        where: withBaseWhere({ renewDate: { lt: today } }),
+      }),
+      prisma.domain.count({
+        where: withBaseWhere({ invoiceId: { not: null } }),
       }),
     ])
 
     return NextResponse.json({
       data: items,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      summary: { total, expiringSoon, expired, linkedInvoice },
     })
   } catch (error) {
     return NextResponse.json(handleApiError(error), { status: handleApiError(error).status })

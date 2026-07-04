@@ -141,7 +141,7 @@ export default function AdminFinancePage() {
     <div className="space-y-5">
       <PageHeader
         title="Finans Yönetimi"
-        description="Ödemeleri ve finansal işlemleri yönetin"
+        description="Tahsilatları ve finansal işlemleri yönetin"
         breadcrumbs={[
           { label: "Admin", href: routes.admin.root },
           { label: "Finans" },
@@ -149,7 +149,7 @@ export default function AdminFinancePage() {
         actions={
           <Button onClick={() => router.push('/admin/finance/add')}>
             <Plus className="mr-2 h-4 w-4" />
-            Yeni Ödeme
+            Manuel Tahsilat
           </Button>
         }
       />

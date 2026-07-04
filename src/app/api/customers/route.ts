@@ -36,8 +36,10 @@ export async function GET(request: NextRequest) {
       filters.push({
         OR: [
           { fullName: { contains: search, mode: 'insensitive' as const } },
+          { sportsSchoolOfficial: { contains: search, mode: 'insensitive' as const } },
           { city: { contains: search, mode: 'insensitive' as const } },
           { district: { contains: search, mode: 'insensitive' as const } },
+          { club: { contains: search, mode: 'insensitive' as const } },
         ]
       })
     }
@@ -70,8 +72,45 @@ export async function GET(request: NextRequest) {
       })
     ])
 
+    const customerIds = customers.map((customer) => customer.id)
+    const accountTotals = customerIds.length > 0
+      ? await prisma.accountTransaction.groupBy({
+          by: ['customerId'],
+          where: { customerId: { in: customerIds } },
+          _sum: {
+            debit: true,
+            credit: true,
+          },
+        })
+      : []
+
+    const accountTotalsByCustomer = new Map(
+      accountTotals.map((total) => {
+        const totalDebit = Number(total._sum.debit || 0)
+        const totalCredit = Number(total._sum.credit || 0)
+
+        return [
+          total.customerId,
+          {
+            totalDebit,
+            totalCredit,
+            balance: totalDebit - totalCredit,
+          },
+        ]
+      })
+    )
+
+    const data = customers.map((customer) => ({
+      ...customer,
+      accountingSummary: accountTotalsByCustomer.get(customer.id) || {
+        totalDebit: 0,
+        totalCredit: 0,
+        balance: 0,
+      },
+    }))
+
     return NextResponse.json({
-      data: customers,
+      data,
       pagination: {
         page,
         limit,

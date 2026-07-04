@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { paymentCreateSchema, type PaymentCreate } from "@/lib/validations"
+import { AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 
 type SimpleCustomer = { id: string; fullName: string }
@@ -20,9 +21,17 @@ interface PaymentFormProps {
   onCancel: () => void
   embedded?: boolean
   initial?: Partial<PaymentCreate>
+  manualCollectionOnly?: boolean
 }
 
-export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, initial }: PaymentFormProps) {
+export function PaymentForm({
+  onSubmit,
+  onSuccess,
+  onCancel,
+  embedded = false,
+  initial,
+  manualCollectionOnly = false,
+}: PaymentFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [customers, setCustomers] = useState<SimpleCustomer[]>([])
   const [subscriptions, setSubscriptions] = useState<SimpleSubscription[]>([])
@@ -38,12 +47,12 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
     resolver: zodResolver(paymentCreateSchema),
     defaultValues: {
       customerId: initial?.customerId ?? "",
-      subscriptionId: initial?.subscriptionId ?? undefined,
+      subscriptionId: manualCollectionOnly ? undefined : initial?.subscriptionId ?? undefined,
       amount: initial?.amount ?? "",
       currency: initial?.currency ?? "TRY",
       dueDate: initial?.dueDate ?? "",
-      paidDate: initial?.paidDate ?? undefined,
-      status: initial?.status ?? "DUE",
+      paidDate: initial?.paidDate ?? (manualCollectionOnly ? toYmd(new Date()) : undefined),
+      status: manualCollectionOnly ? "PAID" : initial?.status ?? "DUE",
       note: initial?.note ?? undefined,
     } as PaymentCreate,
   })
@@ -98,20 +107,29 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
   const handleSubmit = async (data: PaymentCreate) => {
     setIsLoading(true)
     try {
+      const payload = manualCollectionOnly
+        ? {
+            ...data,
+            subscriptionId: undefined,
+            status: "PAID" as const,
+            paidDate: data.dueDate,
+          }
+        : data
+
       if (onSubmit) {
-        await onSubmit(data)
+        await onSubmit(payload)
       } else {
         const response = await fetch(`/api/payments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
+          body: JSON.stringify(payload),
         })
         if (!response.ok) throw new Error("Kaydetme başarısız")
       }
-      toast.success("Ödeme başarıyla oluşturuldu")
+      toast.success(manualCollectionOnly ? "Manuel tahsilat kaydedildi" : "Ödeme başarıyla oluşturuldu")
       onSuccess?.()
     } catch {
-      toast.error("Ödeme kaydedilemedi")
+      toast.error(manualCollectionOnly ? "Manuel tahsilat kaydedilemedi" : "Ödeme kaydedilemedi")
     } finally {
       setIsLoading(false)
     }
@@ -133,12 +151,24 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
     <Card className={embedded ? "border" : "w-full max-w-2xl mx-auto"}>
       {embedded ? null : (
         <CardHeader>
-          <CardTitle>Yeni Ödeme</CardTitle>
+          <CardTitle>{manualCollectionOnly ? "Manuel Tahsilat" : "Yeni Ödeme"}</CardTitle>
         </CardHeader>
       )}
       <CardContent className={embedded ? "p-4" : undefined}>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            {manualCollectionOnly ? (
+              <div className="flex gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Bu ekran sadece alınan parayı kaydeder.</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Satış, fatura, domain veya hosting kaydı oluşturmaz. Yeni satış için Direkt Satış ekranını kullanın.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -146,7 +176,10 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Müşteri</FormLabel>
-                    <Select onValueChange={(v) => { field.onChange(v); loadSubscriptions(v) }} defaultValue={field.value || undefined}>
+                    <Select onValueChange={(v) => {
+                      field.onChange(v)
+                      if (!manualCollectionOnly) loadSubscriptions(v)
+                    }} defaultValue={field.value || undefined}>
                       <SelectTrigger>
                         <SelectValue placeholder="Müşteri seçin" />
                       </SelectTrigger>
@@ -161,59 +194,61 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="subscriptionId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Abonelik (opsiyonel)</FormLabel>
-                    <Select onValueChange={(v) => {
-                      field.onChange(v)
-                      const sub = subscriptions.find((s) => s.id === v)
-                      if (sub) {
-                        if (sub.price) form.setValue('amount', sub.price)
-                        if (sub.period === 'MONTHLY' && sub.startDate) {
-                          const start = new Date(sub.startDate)
-                          const today = new Date()
-                          const desiredDay = start.getDate()
-                          const candidate = new Date(today.getFullYear(), today.getMonth(), desiredDay)
-                          if (candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-                            candidate.setMonth(candidate.getMonth() + 1)
+              {!manualCollectionOnly ? (
+                <FormField
+                  control={form.control}
+                  name="subscriptionId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Abonelik (opsiyonel)</FormLabel>
+                      <Select onValueChange={(v) => {
+                        field.onChange(v)
+                        const sub = subscriptions.find((s) => s.id === v)
+                        if (sub) {
+                          if (sub.price) form.setValue('amount', sub.price)
+                          if (sub.period === 'MONTHLY' && sub.startDate) {
+                            const start = new Date(sub.startDate)
+                            const today = new Date()
+                            const desiredDay = start.getDate()
+                            const candidate = new Date(today.getFullYear(), today.getMonth(), desiredDay)
+                            if (candidate < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+                              candidate.setMonth(candidate.getMonth() + 1)
+                            }
+                            form.setValue('dueDate', toYmd(candidate))
+                          } else if (sub.period === 'YEARLY') {
+                            const due = sub.endDate ? new Date(sub.endDate) : (sub.startDate ? new Date(new Date(sub.startDate).setFullYear(new Date(sub.startDate).getFullYear() + 1)) : new Date())
+                            form.setValue('dueDate', toYmd(due))
                           }
-                          form.setValue('dueDate', toYmd(candidate))
-                        } else if (sub.period === 'YEARLY') {
-                          const due = sub.endDate ? new Date(sub.endDate) : (sub.startDate ? new Date(new Date(sub.startDate).setFullYear(new Date(sub.startDate).getFullYear() + 1)) : new Date())
-                          form.setValue('dueDate', toYmd(due))
+                          const customerId = form.getValues('customerId')
+                          if (customerId) {
+                            computeSubscriptionDebt(customerId, sub.id)
+                          }
                         }
-                        const customerId = form.getValues('customerId')
-                        if (customerId) {
-                          computeSubscriptionDebt(customerId, sub.id)
-                        }
-                      }
-                    }} defaultValue={(field.value as string | undefined) || undefined}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Abonelik seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subscriptions.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {subscriptionDebt !== '' ? (
-                      <div className="text-xs text-muted-foreground mt-1">Borç Bilgisi: {subscriptionDebt} TL</div>
-                    ) : null}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      }} defaultValue={(field.value as string | undefined) || undefined}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Abonelik seçin" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {subscriptions.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {subscriptionDebt !== '' ? (
+                        <div className="text-xs text-muted-foreground mt-1">Borç Bilgisi: {subscriptionDebt} TL</div>
+                      ) : null}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
 
               <FormField
                 control={form.control}
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ödeme Tutarı (TL)</FormLabel>
+                    <FormLabel>{manualCollectionOnly ? "Tahsilat Tutarı (TL)" : "Ödeme Tutarı (TL)"}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -250,7 +285,7 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
                 name="dueDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Vade</FormLabel>
+                    <FormLabel>{manualCollectionOnly ? "Tahsilat Tarihi" : "Vade"}</FormLabel>
                     <FormControl>
                       <Input type="date" aria-required="true" {...field} />
                     </FormControl>
@@ -259,40 +294,44 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="paidDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ödendi (opsiyonel)</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!manualCollectionOnly ? (
+                <FormField
+                  control={form.control}
+                  name="paidDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ödendi (opsiyonel)</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
 
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Durum</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="DUE">Ödenecek</SelectItem>
-                        <SelectItem value="LATE">Gecikmiş</SelectItem>
-                        <SelectItem value="PAID">Ödendi</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!manualCollectionOnly ? (
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Durum</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="DUE">Ödenecek</SelectItem>
+                          <SelectItem value="LATE">Gecikmiş</SelectItem>
+                          <SelectItem value="PAID">Ödendi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
 
               <FormField
                 control={form.control}
@@ -311,7 +350,9 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={onCancel}>İptal</Button>
-              <Button type="submit" disabled={isLoading}>{isLoading ? "Kaydediliyor..." : "Kaydet"}</Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Kaydediliyor..." : manualCollectionOnly ? "Tahsilatı Kaydet" : "Kaydet"}
+              </Button>
             </div>
           </form>
         </Form>

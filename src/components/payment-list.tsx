@@ -188,7 +188,7 @@ export function PaymentList() {
         <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-base font-semibold">Tahsilatlar</h2>
-            <p className="text-xs text-muted-foreground">Ödeme kayıtlarını filtreleyin ve yönetin</p>
+            <p className="text-xs text-muted-foreground">Tahsilat kayıtlarını filtreleyin ve yönetin</p>
           </div>
           {hasActiveFilters ? (
             <Button variant="outline" size="sm" onClick={handleFiltersReset}>

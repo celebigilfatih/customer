@@ -7,6 +7,12 @@ All notable repository changes should be documented here.
 ### Fixed
 
 - Added ADR 0007 for the payment-linked invoice delete contract.
+- Refined the public login screen with a modern split layout, clearer form hierarchy, accessible password visibility control, and responsive mobile presentation.
+- Refined `/admin/domains` to match the hosting list pattern with compact summary cards, renewal status detail, invoice source visibility, and the existing dense filter/table layout.
+- Added authorized contact and compact read-only accounting summary columns to `/admin/customers` while keeping detailed ledger review in customer detail tabs.
+- Expanded `/admin/customers` table rows with customer status and registration date context alongside authorized contact and accounting summary data.
+- Activated sold customers automatically by moving `POTENTIAL` customers to `ACTIVE` inside the direct-sale transaction and backfilled existing sale customers with a data migration.
+- Clarified `/admin/finance/add` as a manual collection surface that only records received money and no longer presents sale, invoice, subscription-plan, or due-status controls.
 - Fixed admin user creation so new users receive an explicit `ADMIN`, `SUPPORT`, or `CUSTOMER` role instead of the legacy non-interactive `USER` default.
 - Added customer linkage handling for `CUSTOMER` portal users and protected user-management APIs behind admin/support authentication.
 - Fixed the `/admin/finance` payment source column so invoice-linked direct-sale collections show the sold domain, hosting, product, service, or free-form invoice item instead of an empty source.
