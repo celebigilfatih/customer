@@ -129,12 +129,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-sm text-gray-600">
-              <p>Demo için:</p>
-              <p className="font-mono bg-gray-100 px-2 py-1 rounded mt-1">
-                Kullanıcı Adı: admin | Şifre: admin
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>

@@ -39,6 +39,9 @@ interface ProductGroup {
   };
 }
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export default function ProductGroupsPage() {
   const router = useRouter();
   const [groups, setGroups] = useState<ProductGroup[]>([]);
@@ -119,8 +122,8 @@ export default function ProductGroupsPage() {
       setDialogOpen(false);
       setFormData({ name: "", description: "", color: "#3b82f6", sortOrder: 0 });
       fetchGroups();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Grup oluşturulamadı"));
     }
   };
 
@@ -139,8 +142,8 @@ export default function ProductGroupsPage() {
 
       toast.success("Grup silindi");
       fetchGroups();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Silme başarısız"));
     }
   };
 
@@ -172,8 +175,8 @@ export default function ProductGroupsPage() {
       setEditDialogOpen(false);
       setEditingGroup(null);
       fetchGroups();
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Güncelleme başarısız"));
     }
   };
 

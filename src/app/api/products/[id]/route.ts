@@ -1,24 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductType } from "@/generated/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 
 const productUpdateSchema = z.object({
+  code: z.string().min(1, "Ürün kodu gereklidir").optional(),
   name: z.string().min(1, "Ürün adı gereklidir").optional(),
+  type: z.enum(["PRODUCT", "SERVICE"]).optional(),
   description: z.string().optional(),
-  minStockLevel: z.number().optional(),
-  unitPrice: z.number().positive("Birim fiyat pozitif olmalıdır").optional(),
+  groupId: z.string().nullable().optional(),
+  minStockLevel: z.coerce.number().optional(),
+  costPrice: z.coerce.number().nullable().optional(),
+  profitMargin: z.coerce.number().nullable().optional(),
+  unitPrice: z.coerce.number().positive("Birim fiyat pozitif olmalıdır").optional(),
   currency: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
+function normalizeGroupId(groupId: string | null | undefined) {
+  return groupId && groupId !== "ungrouped" ? groupId : null;
+}
+
 // GET /api/products/[id] - Ürün detayı
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         movements: {
           orderBy: { createdAt: "desc" },
@@ -53,14 +68,27 @@ export async function GET(
 // PUT /api/products/[id] - Ürün güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const body = await request.json();
     const validatedData = productUpdateSchema.parse(body);
 
     const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            movements: true,
+            proposalItems: true,
+            invoiceItems: true,
+          },
+        },
+      },
     });
 
     if (!existingProduct) {
@@ -70,9 +98,50 @@ export async function PUT(
       );
     }
 
+    if (validatedData.code && validatedData.code !== existingProduct.code) {
+      const duplicate = await prisma.product.findUnique({
+        where: { code: validatedData.code },
+        select: { id: true },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "Bu ürün kodu zaten kullanılıyor" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const nextType = validatedData.type as ProductType | undefined;
+    if (nextType && nextType !== existingProduct.type) {
+      const hasHistory =
+        existingProduct._count.movements > 0 ||
+        existingProduct._count.proposalItems > 0 ||
+        existingProduct._count.invoiceItems > 0;
+
+      if (hasHistory || existingProduct.stockQuantity.greaterThan(0)) {
+        return NextResponse.json(
+          {
+            error:
+              "Kullanılmış veya stoklu katalog kaydının tipi değiştirilemez. Yeni ürün/hizmet kaydı oluşturun.",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const data = {
+      ...validatedData,
+      groupId:
+        validatedData.groupId === undefined
+          ? undefined
+          : normalizeGroupId(validatedData.groupId),
+      minStockLevel:
+        nextType === ProductType.SERVICE ? 0 : validatedData.minStockLevel,
+    };
+
     const product = await prisma.product.update({
-      where: { id: params.id },
-      data: validatedData,
+      where: { id },
+      data,
     });
 
     return NextResponse.json(product);
@@ -94,11 +163,15 @@ export async function PUT(
 // DELETE /api/products/[id] - Ürün sil (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -123,7 +196,7 @@ export async function DELETE(
     ) {
       // Soft delete - sadece pasif yap
       const product = await prisma.product.update({
-        where: { id: params.id },
+        where: { id },
         data: { isActive: false },
       });
       return NextResponse.json({
@@ -134,7 +207,7 @@ export async function DELETE(
 
     // Kullanılmayan ürünü tamamen sil
     await prisma.product.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Ürün silindi" });

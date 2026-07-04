@@ -1,62 +1,71 @@
-import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { PrismaClient } from '../src/generated/prisma/index.js'
 
 const prisma = new PrismaClient()
 
+function requiredEnv(name) {
+  const value = process.env[name]?.trim()
+  if (!value) {
+    throw new Error(`${name} is required`)
+  }
+  return value
+}
+
 async function createAdminUser() {
   try {
-    // Check if admin user already exists
+    const username = requiredEnv('ADMIN_USERNAME')
+    const email = requiredEnv('ADMIN_EMAIL')
+    const password = requiredEnv('ADMIN_PASSWORD')
+    const fullName = process.env.ADMIN_FULL_NAME?.trim() || 'Admin User'
+
+    if (password.length < 12) {
+      throw new Error('ADMIN_PASSWORD must be at least 12 characters')
+    }
+
     const existingAdmin = await prisma.user.findFirst({
       where: { role: 'ADMIN' },
+      select: { username: true, email: true },
     })
 
     if (existingAdmin) {
-      console.log('Admin user already exists:', existingAdmin.username)
-      // Update password to 'admin'
-      const hashedPassword = await bcrypt.hash('admin', 12)
-      await prisma.user.update({
-        where: { id: existingAdmin.id },
-        data: { password: hashedPassword },
-      })
-      console.log('Password updated to: admin')
+      console.log(`Admin user already exists: ${existingAdmin.username} (${existingAdmin.email}). No changes made.`)
       return
     }
 
-    // Check if oguz user exists and update it
-    const oguzUser = await prisma.user.findUnique({
-      where: { username: 'oguz' },
+    const existingIdentity = await prisma.user.findFirst({
+      where: {
+        OR: [{ username }, { email }],
+      },
+      select: { username: true, email: true, role: true },
     })
 
-    if (oguzUser) {
-      const hashedPassword = await bcrypt.hash('admin', 12)
-      await prisma.user.update({
-        where: { id: oguzUser.id },
-        data: {
-          role: 'ADMIN',
-          password: hashedPassword,
-        },
-      })
-      console.log('Oguz user updated to ADMIN with password: admin')
-      return
+    if (existingIdentity) {
+      throw new Error(
+        `A non-admin user already uses this username/email: ${existingIdentity.username} (${existingIdentity.email}, ${existingIdentity.role})`
+      )
     }
 
-    // Create new admin user
-    const hashedPassword = await bcrypt.hash('admin', 12)
+    const hashedPassword = await bcrypt.hash(password, 12)
     const adminUser = await prisma.user.create({
       data: {
-        username: 'admin',
+        username,
         password: hashedPassword,
-        fullName: 'Admin User',
-        email: 'admin@example.com',
+        fullName,
+        email,
         role: 'ADMIN',
         isActive: true,
       },
+      select: {
+        username: true,
+        email: true,
+        role: true,
+      },
     })
 
-    console.log('Admin user created:', adminUser.username)
-    console.log('Password: admin')
+    console.log(`Admin user created: ${adminUser.username} (${adminUser.email}, ${adminUser.role})`)
   } catch (error) {
-    console.error('Error:', error)
+    console.error(error instanceof Error ? error.message : error)
+    process.exitCode = 1
   } finally {
     await prisma.$disconnect()
   }

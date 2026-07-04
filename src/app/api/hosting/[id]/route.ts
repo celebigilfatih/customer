@@ -6,11 +6,12 @@ import { handleApiError, sanitizeInput } from '@/lib/error-handler'
 // GET /api/hosting/[id] - Hosting detay
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const hosting = await prisma.hosting.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
     if (!hosting) {
       return NextResponse.json({ error: "Hosting bulunamadı" }, { status: 404 })
@@ -24,9 +25,10 @@ export async function GET(
 // PUT /api/hosting/[id] - Hosting güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const sanitized = {
       ...body,
@@ -36,7 +38,7 @@ export async function PUT(
     }
     const validated = hostingCreateSchema.partial().parse(sanitized)
     const updated = await prisma.hosting.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validated,
         endDate: validated.endDate ? new Date(validated.endDate) : undefined,
@@ -51,11 +53,12 @@ export async function PUT(
 // DELETE /api/hosting/[id] - Hosting sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     await prisma.hosting.delete({
-      where: { id: params.id },
+      where: { id },
     })
     return NextResponse.json({ message: "Hosting silindi" })
   } catch (error) {

@@ -6,11 +6,12 @@ import { handleApiError, sanitizeInput } from '@/lib/error-handler'
 // GET /api/domains/[id] - Domain detay
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const domain = await prisma.domain.findUnique({
-      where: { id: params.id },
+      where: { id },
     })
     if (!domain) {
       return NextResponse.json({ error: "Domain bulunamadı" }, { status: 404 })
@@ -24,9 +25,10 @@ export async function GET(
 // PUT /api/domains/[id] - Domain güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     const sanitized = {
       ...body,
@@ -36,7 +38,7 @@ export async function PUT(
     }
     const validated = domainCreateSchema.partial().parse(sanitized)
     const updated = await prisma.domain.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validated,
         registerDate: validated.registerDate ? new Date(validated.registerDate) : undefined,
@@ -52,11 +54,12 @@ export async function PUT(
 // DELETE /api/domains/[id] - Domain sil
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     await prisma.domain.delete({
-      where: { id: params.id },
+      where: { id },
     })
     return NextResponse.json({ message: "Domain silindi" })
   } catch (error) {

@@ -35,6 +35,8 @@ export async function GET(
       EXPIRED: 'Süresi Doldu',
     }
 
+    const proposalAmount = Number(proposal.amount.toString())
+
     const html = `<!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -98,7 +100,7 @@ export async function GET(
 
   <div class="section">
     <div class="section-title">Teklif Tutarı</div>
-    <div class="amount">${parseInt(proposal.amount).toLocaleString('tr-TR', { style: 'currency', currency: proposal.currency })}</div>
+    <div class="amount">${proposalAmount.toLocaleString('tr-TR', { style: 'currency', currency: proposal.currency })}</div>
   </div>
 
   ${proposal.notes ? `<div class="section"><div class="section-title">Notlar</div><div style="background: #f9fafb; padding: 15px; border-radius: 4px;">${proposal.notes}</div></div>` : ''}

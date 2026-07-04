@@ -113,6 +113,15 @@ export function SubscriptionForm({ onSubmit, onSuccess, onCancel, embedded = fal
           data.installmentCount = count as unknown as SubscriptionCreate['installmentCount']
         }
       }
+      if (periodWatch === 'YEARLY') {
+        data.yearlyPlan = yearlyPlan
+        if (yearlyPlan === 'single') {
+          if (paymentAmount) data.paymentAmount = paymentAmount
+          if (paymentDueDate) data.paymentDueDate = paymentDueDate
+        } else {
+          data.installmentCount = 12 as unknown as SubscriptionCreate['installmentCount']
+        }
+      }
       if (onSubmit) {
         await onSubmit(data)
       } else {
@@ -122,86 +131,6 @@ export function SubscriptionForm({ onSubmit, onSuccess, onCancel, embedded = fal
           body: JSON.stringify(data),
         })
         if (!response.ok) throw new Error("Kaydetme başarısız")
-        const created = await response.json()
-
-        // Update proposal type separately if provided
-        if (data.proposalType) {
-          await fetch(`/api/subscriptions/${created.id}/proposal-type`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ proposalType: data.proposalType }),
-          })
-        }
-
-        if (data.period === 'YEARLY') {
-          if (yearlyPlan === 'single' && paymentAmount && paymentDueDate) {
-            await fetch(`/api/payments`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                customerId: data.customerId,
-                subscriptionId: created.id,
-                amount: paymentAmount,
-                currency: 'TRY',
-                dueDate: paymentDueDate,
-              }),
-            })
-          }
-          if (yearlyPlan === 'installments') {
-            const annual = parseInt(data.price, 10)
-            const base = Math.floor(annual / 12)
-            const rem = annual % 12
-            const start = new Date(data.startDate)
-            const requests = Array.from({ length: 12 }, (_, i) => {
-              const due = new Date(start)
-              due.setMonth(due.getMonth() + i)
-              const y = due.getFullYear()
-              const m = String(due.getMonth() + 1).padStart(2, '0')
-              const d = String(due.getDate()).padStart(2, '0')
-              const dueStr = `${y}-${m}-${d}`
-              const amt = String(base + (i < rem ? 1 : 0))
-              return fetch(`/api/payments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  customerId: data.customerId,
-                  subscriptionId: created.id,
-                  amount: amt,
-                  currency: 'TRY',
-                  dueDate: dueStr,
-                }),
-              })
-            })
-            await Promise.all(requests)
-            data.installmentCount = 12 as unknown as SubscriptionCreate['installmentCount']
-          }
-        }
-        if (data.period === 'MONTHLY' && installmentCount) {
-          const count = parseInt(installmentCount, 10)
-          if (count > 0) {
-            const start = new Date(data.startDate)
-            const requests = Array.from({ length: count }, (_, i) => {
-              const due = new Date(start)
-              due.setMonth(due.getMonth() + i)
-              const y = due.getFullYear()
-              const m = String(due.getMonth() + 1).padStart(2, '0')
-              const d = String(due.getDate()).padStart(2, '0')
-              const dueStr = `${y}-${m}-${d}`
-              return fetch(`/api/payments`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  customerId: data.customerId,
-                  subscriptionId: created.id,
-                  amount: data.price,
-                  currency: 'TRY',
-                  dueDate: dueStr,
-                }),
-              })
-            })
-            await Promise.all(requests)
-          }
-        }
       }
       toast.success("Abonelik başarıyla oluşturuldu")
       onSuccess?.()

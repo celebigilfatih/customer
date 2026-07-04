@@ -1,9 +1,24 @@
 import { prisma } from '@/lib/prisma'
+import crypto from 'crypto'
 
 type WebhookConfig = { urls: string[]; secret: string }
 
 let current: WebhookConfig | null = null
 let processorStarted = false
+const WEBHOOK_TIMEOUT_MS = Number(process.env.WEBHOOK_TIMEOUT_MS || 10_000)
+const MAX_RETRY_ATTEMPTS = 3
+
+const getRetryDelayMs = (attempt: number) => {
+  if (attempt <= 1) return 30_000
+  if (attempt === 2) return 300_000
+  return 1_800_000
+}
+
+const createQueueDedupeKey = (item: { event: string; url: string; body: string }) =>
+  crypto.createHash('sha256').update(`${item.event}|${item.url}|${item.body}`).digest('hex')
+
+const createLogId = (jobId: string, attempt: number) =>
+  `${jobId}-${attempt}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 export function getWebhookConfig(): WebhookConfig {
   if (current) return current
@@ -17,6 +32,26 @@ export function setWebhookConfig(cfg: Partial<WebhookConfig>): WebhookConfig {
   const prev = getWebhookConfig()
   current = { urls: cfg.urls ?? prev.urls, secret: cfg.secret ?? prev.secret }
   return current
+}
+
+export async function postWebhook(url: string, body: string, secret: string) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS)
+  const signature = secret ? crypto.createHmac('sha256', secret).update(body).digest('hex') : ''
+
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(signature ? { 'X-Webhook-Signature': signature } : {}),
+      },
+      body,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 export async function appendWebhookLog(entry: { id: string; event: string; url: string; ok: boolean; statusCode?: number; error?: string; attempt: number; timestamp: number | Date }) {
@@ -49,12 +84,26 @@ export async function getWebhookQueueStats() {
 }
 
 export async function enqueueWebhookRetry(item: { event: string; url: string; body: string; secret: string; attempt: number }) {
+  const dedupeKey = createQueueDedupeKey(item)
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  const delayMs = item.attempt === 1 ? 30_000 : item.attempt === 2 ? 300_000 : 1_800_000
-  const nextAt = new Date(Date.now() + delayMs)
+  const nextAt = new Date(Date.now() + getRetryDelayMs(item.attempt))
+  const existing = await prisma.webhookQueue.findUnique({ where: { dedupeKey } })
+
+  if (existing) {
+    await prisma.webhookQueue.update({
+      where: { dedupeKey },
+      data: {
+        secret: item.secret,
+        nextAt: existing.nextAt < nextAt ? existing.nextAt : nextAt,
+      },
+    })
+    return
+  }
+
   await prisma.webhookQueue.create({
     data: {
       id,
+      dedupeKey,
       event: item.event,
       url: item.url,
       body: item.body,
@@ -73,32 +122,24 @@ export function startWebhookRetryProcessor() {
     const ready = await prisma.webhookQueue.findMany({ where: { nextAt: { lte: now } }, orderBy: { nextAt: 'asc' }, take: 20 })
     for (const job of ready) {
       try {
-        const signature = job.secret ? (await import('crypto')).default.createHmac('sha256', job.secret).update(job.body).digest('hex') : ''
-        const res = await fetch(job.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(signature ? { 'X-Webhook-Signature': signature } : {}),
-          },
-          body: job.body,
-        })
-        await appendWebhookLog({ id: job.id, event: job.event, url: job.url, ok: res.ok, statusCode: res.status, attempt: job.attempt, timestamp: new Date() })
+        const res = await postWebhook(job.url, job.body, job.secret || '')
+        await appendWebhookLog({ id: createLogId(job.id, job.attempt), event: job.event, url: job.url, ok: res.ok, statusCode: res.status, attempt: job.attempt, timestamp: new Date() })
         if (res.ok) {
           await prisma.webhookQueue.delete({ where: { id: job.id } })
         } else {
-          if (job.attempt >= 3) {
+          if (job.attempt >= MAX_RETRY_ATTEMPTS) {
             await prisma.webhookQueue.delete({ where: { id: job.id } })
           } else {
-            const nextDelay = job.attempt === 1 ? 300_000 : 1_800_000
+            const nextDelay = getRetryDelayMs(job.attempt + 1)
             await prisma.webhookQueue.update({ where: { id: job.id }, data: { attempt: job.attempt + 1, nextAt: new Date(Date.now() + nextDelay) } })
           }
         }
       } catch (e) {
-        await appendWebhookLog({ id: job.id, event: job.event, url: job.url, ok: false, error: e instanceof Error ? e.message : String(e), attempt: job.attempt, timestamp: new Date() })
-        if (job.attempt >= 3) {
+        await appendWebhookLog({ id: createLogId(job.id, job.attempt), event: job.event, url: job.url, ok: false, error: e instanceof Error ? e.message : String(e), attempt: job.attempt, timestamp: new Date() })
+        if (job.attempt >= MAX_RETRY_ATTEMPTS) {
           await prisma.webhookQueue.delete({ where: { id: job.id } })
         } else {
-          const nextDelay = job.attempt === 1 ? 300_000 : 1_800_000
+          const nextDelay = getRetryDelayMs(job.attempt + 1)
           await prisma.webhookQueue.update({ where: { id: job.id }, data: { attempt: job.attempt + 1, nextAt: new Date(Date.now() + nextDelay) } })
         }
       }

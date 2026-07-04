@@ -1,11 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-// removed status import as create no longer sets it explicitly
+import { Prisma } from '@/generated/prisma'
 import { customerCreateSchema } from '@/lib/validations'
 import { handleApiError, sanitizeInput } from '@/lib/error-handler'
+import { isAdminApiUser, requireAdminApi, requireAuthenticatedApi } from '@/lib/api-auth'
+
+function sanitizeMaybeString(value: unknown) {
+  return typeof value === 'string' ? sanitizeInput(value) : value
+}
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuthenticatedApi(request)
+    if (auth.response) return auth.response
+
+    if (!isAdminApiUser(auth.user)) {
+      return NextResponse.json(
+        { error: 'Bu işlem için yetki yok' },
+        { status: 403 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100) // Max 100 items per page
@@ -15,23 +30,32 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    const where = {
-      AND: [
-        search ? {
-          OR: [
-            { fullName: { contains: search, mode: 'insensitive' as const } },
-            { city: { contains: search, mode: 'insensitive' as const } },
-            { district: { contains: search, mode: 'insensitive' as const } },
-          ]
-        } : {},
-        city ? { city: { contains: city, mode: 'insensitive' as const } } : {},
-        club ? { club: { contains: club, mode: 'insensitive' as const } } : {},
-      ].filter(condition => Object.keys(condition).length > 0)
+    const filters: Prisma.CustomerWhereInput[] = []
+
+    if (search) {
+      filters.push({
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' as const } },
+          { city: { contains: search, mode: 'insensitive' as const } },
+          { district: { contains: search, mode: 'insensitive' as const } },
+        ]
+      })
     }
+
+    if (city) {
+      filters.push({ city: { contains: city, mode: 'insensitive' as const } })
+    }
+
+    if (club) {
+      filters.push({ club: { contains: club, mode: 'insensitive' as const } })
+    }
+
+    const where: Prisma.CustomerWhereInput | undefined =
+      filters.length > 0 ? { AND: filters } : undefined
 
     const [customers, total] = await Promise.all([
       prisma.customer.findMany({
-        where: Object.keys(where.AND).length > 0 ? where : undefined,
+        where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -42,7 +66,7 @@ export async function GET(request: NextRequest) {
         }
       }),
       prisma.customer.count({
-        where: Object.keys(where.AND).length > 0 ? where : undefined,
+        where,
       })
     ])
 
@@ -56,28 +80,33 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    return NextResponse.json(handleApiError(error), { status: handleApiError(error).status })
+    return handleApiError(error)
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    
+    const auth = await requireAdminApi(request)
+    if (auth.response) return auth.response
+
+    const body = await request.json() as Record<string, unknown>
+
     // Sanitize string inputs
     const sanitizedBody = {
       ...body,
-      fullName: sanitizeInput(body.fullName),
-      city: sanitizeInput(body.city),
-      district: sanitizeInput(body.district),
-      club: body.club ? sanitizeInput(body.club) : null,
-      sportsSchoolOfficial: body.sportsSchoolOfficial ? sanitizeInput(body.sportsSchoolOfficial) : null,
-      address: body.address ? sanitizeInput(body.address) : null,
+      fullName: sanitizeMaybeString(body.fullName),
+      firmaAdi: sanitizeMaybeString(body.firmaAdi),
+      phoneNumber: sanitizeMaybeString(body.phoneNumber),
+      city: sanitizeMaybeString(body.city),
+      district: sanitizeMaybeString(body.district),
+      club: sanitizeMaybeString(body.club),
+      sportsSchoolOfficial: sanitizeMaybeString(body.sportsSchoolOfficial),
+      address: sanitizeMaybeString(body.address),
+      price: sanitizeMaybeString(body.price),
     }
 
     const validatedData = customerCreateSchema.parse(sanitizedBody)
 
-    // Convert status to Prisma enum if present
     const createData = {
       ...validatedData,
       hosting: "",
@@ -99,6 +128,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(customer, { status: 201 })
   } catch (error) {
-    return NextResponse.json(handleApiError(error), { status: handleApiError(error).status })
+    return handleApiError(error)
   }
 }

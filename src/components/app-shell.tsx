@@ -22,7 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex bg-background text-foreground">
         {hideSidebar ? null : (
           <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card">
-            <div className="p-4 border-b border-border">
+            <div className="flex h-14 items-center border-b border-border px-4">
               <Link href="/" className="flex items-center gap-3">
                 <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-sm">MT</span>
@@ -50,8 +50,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className="flex-1 flex flex-col min-w-0">
           {hideSidebar ? null : (
-            <header className="sticky top-0 z-30 border-b border-border bg-white">
-              <div className="flex items-center gap-4 px-4 h-14">
+            <header className="sticky top-0 z-30 h-14 border-b border-border bg-white">
+              <div className="flex h-full items-center gap-4 px-4">
                 <div className="md:hidden">
                   <MobileSidebar />
                 </div>
@@ -98,7 +98,7 @@ function MobileSidebar() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
-        <div className="p-4 border-b border-border">
+        <div className="flex h-14 items-center border-b border-border px-4">
           <Link href="/" className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">MT</span>

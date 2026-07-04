@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductType } from "@/generated/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 
@@ -12,20 +14,31 @@ const stockAdjustmentSchema = z.object({
 // POST /api/products/[id]/stock - Stok düzeltme
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const body = await request.json();
     const validatedData = stockAdjustmentSchema.parse(body);
 
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!product) {
       return NextResponse.json(
         { error: "Ürün bulunamadı" },
         { status: 404 }
+      );
+    }
+
+    if (product.type === ProductType.SERVICE) {
+      return NextResponse.json(
+        { error: "Hizmet kayıtlarında stok yönetimi yapılmaz" },
+        { status: 400 }
       );
     }
 
@@ -50,7 +63,7 @@ export async function POST(
       // Stok hareketi oluştur
       const movement = await tx.stockMovement.create({
         data: {
-          productId: params.id,
+          productId: id,
           type: validatedData.type,
           quantity:
             validatedData.type === "OUT"
@@ -62,7 +75,7 @@ export async function POST(
 
       // Ürün stoğunu güncelle
       const updatedProduct = await tx.product.update({
-        where: { id: params.id },
+        where: { id },
         data: { stockQuantity: newQuantity },
       });
 
@@ -88,15 +101,19 @@ export async function POST(
 // GET /api/products/[id]/stock - Stok hareketleri
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
 
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!product) {
@@ -107,7 +124,7 @@ export async function GET(
     }
 
     const movements = await prisma.stockMovement.findMany({
-      where: { productId: params.id },
+      where: { productId: id },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
@@ -136,7 +153,7 @@ export async function GET(
     });
 
     const total = await prisma.stockMovement.count({
-      where: { productId: params.id },
+      where: { productId: id },
     });
 
     return NextResponse.json({

@@ -1,16 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { CustomerStatus } from '@/generated/prisma'
 import { customerUpdateSchema } from '@/lib/validations'
 import { handleApiError, validateId, sanitizeInput } from '@/lib/error-handler'
+import { isAdminApiUser, requireAdminApi, requireAuthenticatedApi } from '@/lib/api-auth'
+
+function sanitizeMaybeString(value: unknown) {
+  return typeof value === 'string' ? sanitizeInput(value) : value
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAuthenticatedApi(request)
+    if (auth.response) return auth.response
+
     const resolvedParams = await params
-    validateId(resolvedParams.id)
+    if (!validateId(resolvedParams.id)) {
+      return NextResponse.json(
+        { error: 'Geçersiz müşteri ID' },
+        { status: 400 }
+      )
+    }
+
+    if (!isAdminApiUser(auth.user) && auth.user.customerId !== resolvedParams.id) {
+      return NextResponse.json(
+        { error: 'Bu işlem için yetki yok' },
+        { status: 403 }
+      )
+    }
 
     const customer = await prisma.customer.findUnique({
       where: { id: resolvedParams.id },
@@ -33,7 +52,7 @@ export async function GET(
 
     return NextResponse.json(customer)
   } catch (error) {
-    return NextResponse.json(handleApiError(error), { status: handleApiError(error).status })
+    return handleApiError(error)
   }
 }
 
@@ -42,23 +61,36 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const resolvedParams = await params
-    validateId(resolvedParams.id)
+    const auth = await requireAdminApi(request)
+    if (auth.response) return auth.response
 
-    const body = await request.json()
-    
+    const resolvedParams = await params
+    if (!validateId(resolvedParams.id)) {
+      return NextResponse.json(
+        { error: 'Geçersiz müşteri ID' },
+        { status: 400 }
+      )
+    }
+
+    const body = await request.json() as Record<string, unknown>
+
     // Sanitize string inputs
     const sanitizedBody = {
       ...body,
-      fullName: body.fullName ? sanitizeInput(body.fullName) : undefined,
-      city: body.city ? sanitizeInput(body.city) : undefined,
-      district: body.district ? sanitizeInput(body.district) : undefined,
-      club: body.club ? sanitizeInput(body.club) : undefined,
-      sportsSchoolOfficial: body.sportsSchoolOfficial ? sanitizeInput(body.sportsSchoolOfficial) : undefined,
-      hosting: body.hosting ? sanitizeInput(body.hosting) : undefined,
-      duration: body.duration ? sanitizeInput(body.duration) : undefined,
-      offer: body.offer ? sanitizeInput(body.offer) : undefined,
-      address: body.address ? sanitizeInput(body.address) : undefined,
+      fullName: sanitizeMaybeString(body.fullName),
+      firmaAdi: sanitizeMaybeString(body.firmaAdi),
+      phoneNumber: sanitizeMaybeString(body.phoneNumber),
+      city: sanitizeMaybeString(body.city),
+      district: sanitizeMaybeString(body.district),
+      club: sanitizeMaybeString(body.club),
+      sportsSchoolOfficial: sanitizeMaybeString(body.sportsSchoolOfficial),
+      hosting: sanitizeMaybeString(body.hosting),
+      duration: sanitizeMaybeString(body.duration),
+      startDate: sanitizeMaybeString(body.startDate),
+      endDate: sanitizeMaybeString(body.endDate),
+      offer: sanitizeMaybeString(body.offer),
+      address: sanitizeMaybeString(body.address),
+      price: sanitizeMaybeString(body.price),
     }
 
     const validatedData = customerUpdateSchema.parse(sanitizedBody)
@@ -80,7 +112,7 @@ export async function PUT(
 
     return NextResponse.json(customer)
   } catch (error) {
-    return NextResponse.json(handleApiError(error), { status: handleApiError(error).status })
+    return handleApiError(error)
   }
 }
 
@@ -89,8 +121,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request)
+    if (auth.response) return auth.response
+
     const resolvedParams = await params
-    validateId(resolvedParams.id)
+    if (!validateId(resolvedParams.id)) {
+      return NextResponse.json(
+        { error: 'Geçersiz müşteri ID' },
+        { status: 400 }
+      )
+    }
 
     // Check if customer exists
     const existingCustomer = await prisma.customer.findUnique({
@@ -110,11 +150,11 @@ export async function DELETE(
       where: { id: resolvedParams.id }
     })
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Customer deleted successfully',
       deletedNotesCount: existingCustomer._count.notes
     })
   } catch (error) {
-    return NextResponse.json(handleApiError(error), { status: handleApiError(error).status })
+    return handleApiError(error)
   }
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { InvoiceStatus, Prisma } from "@/generated/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 
 const invoiceItemSchema = z.object({
@@ -24,15 +26,20 @@ const invoiceSchema = z.object({
 // GET /api/invoices - Fatura listesi
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId");
     const status = searchParams.get("status");
     const search = searchParams.get("search");
 
-    const where: any = {};
+    const where: Prisma.InvoiceWhereInput = {};
 
     if (customerId) where.customerId = customerId;
-    if (status) where.status = status;
+    if (status && Object.values(InvoiceStatus).includes(status as InvoiceStatus)) {
+      where.status = status as InvoiceStatus;
+    }
     if (search) {
       where.OR = [
         { number: { contains: search, mode: "insensitive" } },
@@ -57,6 +64,28 @@ export async function GET(request: NextRequest) {
             number: true,
           },
         },
+        items: {
+          select: {
+            id: true,
+            description: true,
+            domain: {
+              select: {
+                name: true,
+              },
+            },
+            hosting: {
+              select: {
+                name: true,
+              },
+            },
+            product: {
+              select: {
+                name: true,
+                type: true,
+              },
+            },
+          },
+        },
         _count: {
           select: {
             payments: true,
@@ -79,6 +108,9 @@ export async function GET(request: NextRequest) {
 // POST /api/invoices - Yeni fatura oluştur
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+
     const body = await request.json();
     const validatedData = invoiceSchema.parse(body);
 

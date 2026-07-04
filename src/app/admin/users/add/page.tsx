@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/form";
 import { routes } from "@/lib/routes";
 import { toast } from "sonner";
-import { Plus, User, Mail, Lock, Shield, UserCircle } from "lucide-react";
+import { Plus, User, Mail, Lock, UserCircle } from "lucide-react";
 
 const userSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalı"),
@@ -31,13 +31,14 @@ const userSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
+type UserFormInput = z.input<typeof userSchema>;
+type UserFormData = z.output<typeof userSchema>;
 
 export default function AdminUserAddPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<UserFormData>({
+  const form = useForm<UserFormInput, unknown, UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       username: "",

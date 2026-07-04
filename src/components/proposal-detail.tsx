@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -84,7 +84,7 @@ export function ProposalDetail({ proposalId, onApprove, onReject, showActions = 
     loadProposalTypes()
   }, [])
 
-  const fetchProposal = async () => {
+  const fetchProposal = useCallback(async () => {
     try {
       const res = await fetch(`/api/proposals/${proposalId}`)
       if (!res.ok) throw new Error()
@@ -96,11 +96,11 @@ export function ProposalDetail({ proposalId, onApprove, onReject, showActions = 
     } finally {
       setLoading(false)
     }
-  }
+  }, [proposalId])
 
   useEffect(() => {
     fetchProposal()
-  }, [proposalId])
+  }, [fetchProposal])
 
   const handleApprove = async () => {
     setApproving(true)
@@ -108,7 +108,7 @@ export function ProposalDetail({ proposalId, onApprove, onReject, showActions = 
       const res = await fetch(`/api/proposals/${proposalId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "APPROVED", notes }),
+        body: JSON.stringify({ approvedBy: "Admin", notes }),
       })
       if (!res.ok) throw new Error()
       toast.success("Teklif onaylandı")
@@ -124,10 +124,10 @@ export function ProposalDetail({ proposalId, onApprove, onReject, showActions = 
   const handleReject = async () => {
     setRejecting(true)
     try {
-      const res = await fetch(`/api/proposals/${proposalId}/approve`, {
+      const res = await fetch(`/api/proposals/${proposalId}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "REJECTED", notes }),
+        body: JSON.stringify({ reason: notes }),
       })
       if (!res.ok) throw new Error()
       toast.success("Teklif reddedildi")
@@ -145,19 +145,14 @@ export function ProposalDetail({ proposalId, onApprove, onReject, showActions = 
     return type ? type.label : typeName
   }
 
-  const typeLabels: Record<string, string> = {
-    SUBSCRIPTION: "Abonelik",
-    PROJECT: "Proje",
-    MAINTENANCE: "Bakım Anlaşması",
-    RENEWAL: "Yenileme",
-  }
-
   const statusLabels: Record<string, { label: string; className: string }> = {
     DRAFT: { label: "Taslak", className: "bg-gray-100 text-gray-700" },
+    SENT: { label: "Gönderildi", className: "bg-blue-100 text-blue-700" },
     PENDING: { label: "Beklemede", className: "bg-yellow-100 text-yellow-700" },
     APPROVED: { label: "Onaylandı", className: "bg-green-100 text-green-700" },
     REJECTED: { label: "Reddedildi", className: "bg-red-100 text-red-700" },
     EXPIRED: { label: "Süresi Doldu", className: "bg-gray-200 text-gray-500" },
+    CONVERTED: { label: "Satışa Döndü", className: "bg-purple-100 text-purple-700" },
   }
 
   if (loading) {
@@ -168,7 +163,7 @@ export function ProposalDetail({ proposalId, onApprove, onReject, showActions = 
     return <div className="text-center py-8 text-muted-foreground">Teklif bulunamadı</div>
   }
 
-  const canTakeAction = showActions && proposal.status === "PENDING"
+  const canTakeAction = showActions && (proposal.status === "PENDING" || proposal.status === "SENT")
 
   return (
     <div className="space-y-6">

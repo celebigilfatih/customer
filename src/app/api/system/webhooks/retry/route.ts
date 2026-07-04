@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { handleApiError } from '@/lib/error-handler'
-import crypto from 'crypto'
-import { getWebhookConfig, appendWebhookLog, enqueueWebhookRetry, startWebhookRetryProcessor } from '@/lib/webhook-config'
+import { getWebhookConfig, appendWebhookLog, enqueueWebhookRetry, postWebhook, startWebhookRetryProcessor } from '@/lib/webhook-config'
 
 type EventType = 'daily-summary' | 'due-payments' | 'expiring-services'
 
@@ -47,7 +46,7 @@ async function buildPayload(event: EventType) {
     data: [
       ...subsEndSoon.map(s => ({ type: 'subscription', id: s.id, customerId: s.customerId, name: s.name, endDate: s.endDate })),
       ...domainsRenewSoon.map(d => ({ type: 'domain', id: d.id, customerId: d.customerId, name: d.name, renewDate: d.renewDate })),
-      ...hostingEndSoon.map(h => ({ type: 'hosting', id: h.id, customerId: h.customerId, package: h.package, endDate: h.endDate })),
+      ...hostingEndSoon.map(h => ({ type: 'hosting', id: h.id, customerId: h.customerId, package: h.name, endDate: h.endDate })),
     ],
   }
 }
@@ -64,14 +63,9 @@ export async function POST(request: NextRequest) {
     const payload = await buildPayload(event)
     const json = JSON.stringify(payload)
     const { secret } = getWebhookConfig()
-    const signature = secret ? crypto.createHmac('sha256', secret).update(json).digest('hex') : ''
 
     try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(signature ? { 'X-Webhook-Signature': signature } : {}) },
-        body: json,
-      })
+      const res = await postWebhook(url, json, secret)
       await appendWebhookLog({ id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`, event, url, ok: res.ok, statusCode: res.status, attempt: 1, timestamp: new Date() })
       if (!res.ok) await enqueueWebhookRetry({ event, url, body: json, secret, attempt: 2 })
     } catch (e) {

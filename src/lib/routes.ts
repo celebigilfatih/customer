@@ -9,6 +9,8 @@ export const routes = {
     domains: "/admin/domains",
     hosting: "/admin/hosting",
     proposals: "/admin/proposals",
+    salesNew: "/admin/sales/new",
+    suppliers: "/admin/suppliers",
     tasks: "/admin/tasks",
     finance: "/admin/finance",
     reports: "/admin/reports",
@@ -28,10 +30,10 @@ export const routes = {
     proposals: "/portal/proposals",
   },
   customers: {
-    list: "/customers",
-    add: "/customers/add",
-    detail: (id: string) => `/customers/${id}`,
-    edit: (id: string) => `/customers/${id}/edit`,
+    list: "/admin/customers",
+    add: "/admin/customers/add",
+    detail: (id: string) => `/admin/customers/${id}`,
+    edit: (id: string) => `/admin/customers/${id}/edit`,
   },
   users: {
     list: "/users",

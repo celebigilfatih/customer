@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,12 +32,13 @@ const userSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
-type UserFormData = z.infer<typeof userSchema>;
+type UserFormInput = z.input<typeof userSchema>;
+type UserFormData = z.output<typeof userSchema>;
 
 interface User {
   id: string;
   username: string;
-  fullName: string | null;
+  fullName: string;
   email: string;
   isActive: boolean;
 }
@@ -50,7 +51,7 @@ export default function AdminUserEditPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const form = useForm<UserFormData>({
+  const form = useForm<UserFormInput, unknown, UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
       username: "",
@@ -61,11 +62,7 @@ export default function AdminUserEditPage() {
     },
   });
 
-  useEffect(() => {
-    fetchUser();
-  }, [userId]);
-
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const response = await fetch("/api/users");
       if (!response.ok) throw new Error("Kullanıcılar yüklenemedi");
@@ -81,19 +78,23 @@ export default function AdminUserEditPage() {
           isActive: foundUser.isActive,
         });
       }
-    } catch (err) {
+    } catch {
       toast.error("Kullanıcı bilgileri yüklenemedi");
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, userId]);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   const onSubmit = async (data: UserFormData) => {
     setIsLoading(true);
     try {
-      const payload = { ...data };
+      const payload: Partial<UserFormData> = { ...data };
       if (!payload.password) {
-        delete (payload as { password?: string }).password;
+        delete payload.password;
       }
 
       const response = await fetch(`/api/users/${userId}`, {

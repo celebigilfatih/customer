@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 
 // GET /api/accounting/customers - Cari hesap listesi
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
 
-    const where: any = {};
+    const where: Prisma.CustomerWhereInput = {};
 
     if (search) {
       where.OR = [
@@ -21,26 +26,27 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    // Her müşteri için bakiye hesapla
-    const customersWithBalance = await Promise.all(
-      customers.map(async (customer) => {
-        const transactions = await prisma.accountTransaction.findMany({
-          where: { customerId: customer.id },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        });
-
-        const lastBalance =
-          transactions.length > 0 
-            ? transactions[0].balance.toString()
-            : "0";
-
-        return {
-          ...customer,
-          currentBalance: lastBalance,
-        };
-      })
+    const balances = await prisma.accountTransaction.groupBy({
+      by: ["customerId"],
+      where: { customerId: { in: customers.map((customer) => customer.id) } },
+      _sum: {
+        debit: true,
+        credit: true,
+      },
+    });
+    const balanceMap = new Map(
+      balances.map((balance) => [
+        balance.customerId,
+        (balance._sum.debit ?? new Prisma.Decimal(0))
+          .minus(balance._sum.credit ?? new Prisma.Decimal(0))
+          .toString(),
+      ])
     );
+
+    const customersWithBalance = customers.map((customer) => ({
+      ...customer,
+      currentBalance: balanceMap.get(customer.id) ?? "0",
+    }));
 
     return NextResponse.json(customersWithBalance);
   } catch (error) {

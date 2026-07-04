@@ -3,15 +3,13 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { 
-  Users, Home, LogOut, Globe, Server, Repeat, ClipboardList, 
-  Wallet, BarChart3, Webhook, Ticket, User, FileText, 
-  ChevronRight, LayoutDashboard, Settings, CreditCard, 
-  Briefcase, LineChart, Bell, Package, Calculator, Receipt
+import {
+  Users, Home, LogOut, Globe, Server, Repeat, ClipboardList,
+  BarChart3, Webhook, Ticket, User, FileText,
+  LayoutDashboard, Settings, CreditCard,
+  Briefcase, Package, Calculator, Receipt, ShoppingCart, Truck, ChevronDown,
 } from "lucide-react"
 import { routes } from "@/lib/routes"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Separator } from "@/components/ui/separator"
 
 type NavItem = {
@@ -24,7 +22,6 @@ type NavSection = {
   title: string
   icon: React.ReactNode
   items: NavItem[]
-  collapsible?: boolean
 }
 
 function getSections(pathname: string): NavSection[] {
@@ -42,9 +39,8 @@ function getSections(pathname: string): NavSection[] {
         ],
       },
       {
-        title: "Hizmetler",
+        title: "Süreli Hizmetler",
         icon: <Briefcase className="h-4 w-4" />,
-        collapsible: true,
         items: [
           { label: "Abonelikler", href: routes.admin.subscriptions, icon: <Repeat className="h-4 w-4" /> },
           { label: "Domainler", href: routes.admin.domains, icon: <Globe className="h-4 w-4" /> },
@@ -54,37 +50,27 @@ function getSections(pathname: string): NavSection[] {
       {
         title: "Muhasebe",
         icon: <Calculator className="h-4 w-4" />,
-        collapsible: true,
         items: [
-          { label: "Cari Hesaplar", href: "/admin/accounting/customers", icon: <Users className="h-4 w-4" /> },
           { label: "Faturalar", href: "/admin/invoices", icon: <Receipt className="h-4 w-4" /> },
-          { label: "Tahsilatlar", href: "/admin/payments", icon: <CreditCard className="h-4 w-4" /> },
+          { label: "Tahsilatlar", href: "/admin/finance", icon: <CreditCard className="h-4 w-4" /> },
+          { label: "Tedarikçiler", href: routes.admin.suppliers, icon: <Truck className="h-4 w-4" /> },
+          { label: "Raporlar", href: routes.admin.reports, icon: <BarChart3 className="h-4 w-4" /> },
         ],
       },
       {
         title: "Stok",
         icon: <Package className="h-4 w-4" />,
-        collapsible: true,
         items: [
-          { label: "Ürünler", href: "/admin/products", icon: <Package className="h-4 w-4" /> },
+          { label: "Satış Kataloğu", href: "/admin/products", icon: <Package className="h-4 w-4" /> },
         ],
       },
       {
         title: "İşlemler",
         icon: <ClipboardList className="h-4 w-4" />,
-        collapsible: true,
         items: [
+          { label: "Direkt Satış", href: routes.admin.salesNew, icon: <ShoppingCart className="h-4 w-4" /> },
           { label: "Teklifler", href: routes.admin.proposals, icon: <FileText className="h-4 w-4" /> },
           { label: "Görev ve Talepler", href: routes.admin.tasks, icon: <ClipboardList className="h-4 w-4" /> },
-        ],
-      },
-      {
-        title: "Finans",
-        icon: <CreditCard className="h-4 w-4" />,
-        collapsible: true,
-        items: [
-          { label: "Finans Yönetimi", href: routes.admin.finance, icon: <Wallet className="h-4 w-4" /> },
-          { label: "Raporlar", href: routes.admin.reports, icon: <BarChart3 className="h-4 w-4" /> },
         ],
       },
       {
@@ -97,7 +83,6 @@ function getSections(pathname: string): NavSection[] {
       {
         title: "Ayarlar",
         icon: <Settings className="h-4 w-4" />,
-        collapsible: true,
         items: [
           { label: "Teklif Türleri", href: "/admin/settings/proposal-types", icon: <FileText className="h-4 w-4" /> },
           { label: "Webhooklar", href: routes.admin.settings.webhooks, icon: <Webhook className="h-4 w-4" /> },
@@ -117,9 +102,8 @@ function getSections(pathname: string): NavSection[] {
         ],
       },
       {
-        title: "Hizmetlerim",
+        title: "Süreli Hizmetlerim",
         icon: <Briefcase className="h-4 w-4" />,
-        collapsible: true,
         items: [
           { label: "Aboneliklerim", href: routes.portal.subscriptions, icon: <Repeat className="h-4 w-4" /> },
           { label: "Domainlerim", href: routes.portal.domains, icon: <Globe className="h-4 w-4" /> },
@@ -160,161 +144,146 @@ function getSections(pathname: string): NavSection[] {
 
 function NavItemLink({ item, isActive }: { item: NavItem; isActive: boolean }) {
   return (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200",
-              isActive
-                ? "bg-primary/10 text-primary shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <span className={cn("transition-colors", isActive ? "text-primary" : "text-muted-foreground")}>
-              {item.icon}
-            </span>
-            <span>{item.label}</span>
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="hidden lg:block">
-          {item.label}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Link
+      href={item.href}
+      className={cn(
+        "group flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
+        isActive
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+      )}
+    >
+      <span
+        className={cn(
+          "transition-colors group-hover:text-foreground",
+          isActive ? "text-foreground" : "text-muted-foreground"
+        )}
+      >
+        {item.icon}
+      </span>
+      <span>{item.label}</span>
+    </Link>
   )
 }
 
-function SectionHeader({ 
-  section, 
-  isOpen, 
+function SectionHeader({
+  section,
+  hasActiveItem,
+  isOpen,
   onToggle,
-  hasActiveItem 
-}: { 
-  section: NavSection; 
-  isOpen: boolean; 
-  onToggle: () => void;
-  hasActiveItem: boolean;
+}: {
+  section: NavSection
+  hasActiveItem: boolean
+  isOpen: boolean
+  onToggle: () => void
 }) {
-  if (!section.collapsible) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {section.icon}
-        <span>{section.title}</span>
-      </div>
-    )
-  }
-
   return (
-    <CollapsibleTrigger asChild>
-      <button
-        onClick={onToggle}
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={isOpen}
+      className={cn(
+        "flex h-9 w-full items-center justify-between rounded-md px-3 text-xs font-semibold uppercase tracking-wider transition-colors",
+        hasActiveItem ? "text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        {section.icon}
+        <span className="truncate">{section.title}</span>
+      </span>
+      <ChevronDown
         className={cn(
-          "flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors",
-          hasActiveItem ? "text-primary" : "text-muted-foreground hover:text-foreground"
+          "h-4 w-4 shrink-0 transition-transform duration-200",
+          isOpen ? "rotate-180" : "rotate-0"
         )}
-      >
-        <div className="flex items-center gap-2">
-          {section.icon}
-          <span>{section.title}</span>
-        </div>
-        <ChevronRight className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-90")} />
-      </button>
-    </CollapsibleTrigger>
+      />
+    </button>
   )
 }
 
 export function Sidebar() {
   const router = useRouter()
   const pathname = usePathname() || "/"
-  const [openSections, setOpenSections] = React.useState<string[]>(["Ana Menü", "Hizmetler", "Muhasebe", "Stok", "İşlemler", "Finans", "Ayarlar"])
 
-  const isActive = (href: string) => pathname === href
-
-  const toggleSection = (title: string) => {
-    setOpenSections(prev => 
-      prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title]
-    )
-  }
+  const isActive = React.useCallback((href: string) => pathname === href, [pathname])
 
   const handleLogout = () => {
     document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
     router.push(routes.login)
   }
 
-  const sections = getSections(pathname)
+  const sections = React.useMemo(() => getSections(pathname), [pathname])
+  const activeSectionTitles = React.useMemo(
+    () => sections.filter((section) => section.items.some((item) => isActive(item.href))).map((section) => section.title),
+    [isActive, sections]
+  )
+  const [openSections, setOpenSections] = React.useState<Set<string>>(
+    () => new Set(sections.map((section) => section.title))
+  )
+
+  React.useEffect(() => {
+    setOpenSections((current) => {
+      const next = new Set(current)
+      activeSectionTitles.forEach((title) => next.add(title))
+      return next
+    })
+  }, [activeSectionTitles])
+
+  const toggleSection = (title: string) => {
+    setOpenSections((current) => {
+      const next = new Set(current)
+      if (next.has(title)) {
+        next.delete(title)
+      } else {
+        next.add(title)
+      }
+      return next
+    })
+  }
 
   return (
-    <TooltipProvider delayDuration={0}>
-      <nav className="flex flex-col h-full gap-1">
-        <div className="flex-1 space-y-4">
-          {sections.map((section) => {
-            const isOpen = openSections.includes(section.title)
-            const hasActiveItem = section.items.some(item => isActive(item.href))
-            
-            if (section.collapsible) {
-              return (
-                <Collapsible
-                  key={section.title}
-                  open={isOpen}
-                  onOpenChange={() => toggleSection(section.title)}
-                  className="space-y-1"
-                >
-                  <SectionHeader 
-                    section={section} 
-                    isOpen={isOpen} 
-                    onToggle={() => toggleSection(section.title)}
-                    hasActiveItem={hasActiveItem}
-                  />
-                  <CollapsibleContent className="space-y-0.5 pl-2">
-                    {section.items.map((item) => (
-                      <NavItemLink 
-                        key={item.label} 
-                        item={item} 
-                        isActive={isActive(item.href)} 
-                      />
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              )
-            }
+    <nav className="flex h-full flex-col gap-1">
+      <div className="flex-1">
+        {sections.map((section) => {
+          const hasActiveItem = section.items.some(item => isActive(item.href))
+          const isOpen = openSections.has(section.title)
 
-            return (
-              <div key={section.title} className="space-y-1">
-                <SectionHeader 
-                  section={section} 
-                  isOpen={true}
-                  onToggle={() => {}}
-                  hasActiveItem={hasActiveItem}
-                />
-                <div className="space-y-0.5">
+          return (
+            <div key={section.title} className="border-b border-border/70 py-2 first:pt-0 last:border-b-0">
+              <SectionHeader
+                section={section}
+                hasActiveItem={hasActiveItem}
+                isOpen={isOpen}
+                onToggle={() => toggleSection(section.title)}
+              />
+              {isOpen && (
+                <div className="mt-1 space-y-0.5">
                   {section.items.map((item) => (
-                    <NavItemLink 
-                      key={item.label} 
-                      item={item} 
-                      isActive={isActive(item.href)} 
+                    <NavItemLink
+                      key={item.label}
+                      item={item}
+                      isActive={isActive(item.href)}
                     />
                   ))}
                 </div>
-              </div>
-            )
-          })}
-        </div>
-        
-        <Separator className="my-2" />
-        
-        <button
-          onClick={handleLogout}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          )}
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Çıkış Yap</span>
-        </button>
-      </nav>
-    </TooltipProvider>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <Separator className="my-2" />
+
+      <button
+        onClick={handleLogout}
+        className={cn(
+          "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        )}
+      >
+        <LogOut className="h-4 w-4" />
+        <span>Çıkış Yap</span>
+      </button>
+    </nav>
   )
 }

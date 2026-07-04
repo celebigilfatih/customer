@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 
 const productGroupSchema = z.object({
@@ -12,6 +13,9 @@ const productGroupSchema = z.object({
 // GET /api/product-groups - Grup listesi
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+
     const groups = await prisma.productGroup.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -37,6 +41,9 @@ export async function GET(request: NextRequest) {
 // POST /api/product-groups - Yeni grup oluştur
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+
     const body = await request.json();
     const validatedData = productGroupSchema.parse(body);
 

@@ -1,95 +1,110 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ProductType, TransactionType } from "@/generated/prisma";
+import { createAccountTransaction } from "@/lib/accounting-ledger";
+import { requireAdminApi } from "@/lib/api-auth";
 
 // POST /api/invoices/[id]/issue - Faturayı kes
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const invoice = await prisma.invoice.findUnique({
-      where: { id: params.id },
-      include: {
-        items: {
-          include: {
-            product: true,
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
+    const result = await prisma.$transaction(async (tx) => {
+      const invoice = await tx.invoice.findUnique({
+        where: { id },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (!invoice) {
-      return NextResponse.json(
-        { error: "Fatura bulunamadı" },
-        { status: 404 }
-      );
-    }
+      if (!invoice) {
+        return {
+          status: 404,
+          body: { error: "Fatura bulunamadı" },
+        };
+      }
 
-    if (invoice.status !== "DRAFT") {
-      return NextResponse.json(
-        { error: "Sadece taslak faturalar kesilebilir" },
-        { status: 400 }
-      );
-    }
+      if (invoice.status !== "DRAFT") {
+        return {
+          status: 400,
+          body: { error: "Sadece taslak faturalar kesilebilir" },
+        };
+      }
 
-    // 1. Fatura durumunu güncelle
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: params.id },
-      data: {
-        status: "ISSUED",
-        issueDate: new Date(),
-      },
-    });
+      for (const item of invoice.items) {
+        if (item.productId && item.product?.type === ProductType.PRODUCT) {
+          const newStock = item.product.stockQuantity.minus(item.quantity);
+          if (newStock.lessThan(0)) {
+            return {
+              status: 400,
+              body: { error: `Yetersiz stok: ${item.product.name}` },
+            };
+          }
+        }
+      }
 
-    // 2. Cari hesaba borç kaydı oluştur
-    await prisma.accountTransaction.create({
-      data: {
+      // 1. Fatura durumunu güncelle
+      const updatedInvoice = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: "ISSUED",
+          issueDate: new Date(),
+        },
+      });
+
+      // 2. Cari hesaba borç kaydı oluştur
+      await createAccountTransaction(tx, {
         customerId: invoice.customerId,
-        type: "INVOICE_DEBT",
+        type: TransactionType.INVOICE_DEBT,
         debit: invoice.total,
         credit: 0,
-        balance: invoice.total,
         invoiceId: invoice.id,
         description: `Fatura: ${invoice.number}`,
-      },
-    });
+      });
 
-    // 3. Stok hareketi oluştur (ürünler için)
-    for (const item of invoice.items) {
-      if (item.productId && item.product) {
-        const newStock = item.product.stockQuantity.minus(item.quantity);
+      // 3. Stok hareketi oluştur (ürünler için)
+      for (const item of invoice.items) {
+        if (item.productId && item.product?.type === ProductType.PRODUCT) {
+          const newStock = item.product.stockQuantity.minus(item.quantity);
 
-        // Negatif stok kontrolü
-        if (newStock.lessThan(0)) {
-          return NextResponse.json(
-            { error: `Yetersiz stok: ${item.product.name}` },
-            { status: 400 }
-          );
+          await tx.stockMovement.create({
+            data: {
+              productId: item.productId,
+              type: "OUT",
+              quantity: item.quantity,
+              invoiceId: invoice.id,
+              description: `Fatura: ${invoice.number}`,
+            },
+          });
+
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stockQuantity: newStock },
+          });
         }
-
-        // Stok hareketi oluştur
-        await prisma.stockMovement.create({
-          data: {
-            productId: item.productId,
-            type: "OUT",
-            quantity: item.quantity,
-            invoiceId: invoice.id,
-            description: `Fatura: ${invoice.number}`,
-          },
-        });
-
-        // Ürün stoğunu güncelle
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stockQuantity: newStock },
-        });
       }
-    }
+
+      return {
+        status: 200,
+        body: {
+          message: "Fatura kesildi ve cari borç oluşturuldu",
+          invoice: updatedInvoice,
+        },
+      };
+    });
 
     return NextResponse.json({
-      message: "Fatura kesildi ve cari borç oluşturuldu",
-      invoice: updatedInvoice,
-    });
+      ...result.body,
+    }, { status: result.status });
   } catch (error) {
     console.error("Fatura kesilirken hata:", error);
     return NextResponse.json(

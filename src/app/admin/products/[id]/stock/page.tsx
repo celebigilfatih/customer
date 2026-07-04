@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BackButton } from "@/components/back-button";
-import { ArrowRight, ArrowLeft, Plus, Package, History } from "lucide-react";
+import { ArrowRight, ArrowLeft, Plus, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface StockMovement {
@@ -61,13 +61,21 @@ interface Product {
   id: string;
   code: string;
   name: string;
+  type: "PRODUCT" | "SERVICE";
   stockQuantity: string;
   minStockLevel: string;
 }
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
+const formatStockValue = (value: string) => {
+  const numericValue = Number(value);
+  return Number.isInteger(numericValue) ? String(numericValue) : value;
+};
+
 export default function ProductStockPage() {
   const params = useParams();
-  const router = useRouter();
   const productId = params.id as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -80,11 +88,7 @@ export default function ProductStockPage() {
     description: "",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [productId]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const response = await fetch(`/api/products/${productId}/stock`);
       if (!response.ok) throw new Error("Veriler alınamadı");
@@ -92,12 +96,16 @@ export default function ProductStockPage() {
       const data = await response.json();
       setProduct(data.product);
       setMovements(data.movements || []);
-    } catch (error) {
+    } catch {
       toast.error("Veriler yüklenirken hata oluştu");
     } finally {
       setLoading(false);
     }
-  };
+  }, [productId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAdjustment = async () => {
     try {
@@ -126,8 +134,8 @@ export default function ProductStockPage() {
       setDialogOpen(false);
       setAdjustment({ type: "IN", quantity: "", description: "" });
       fetchData();
-    } catch (error: any) {
-      toast.error(error.message || "Stok ayarlama başarısız");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Stok ayarlama başarısız"));
     }
   };
 
@@ -143,13 +151,19 @@ export default function ProductStockPage() {
 
   const getStockStatus = () => {
     if (!product) return null;
+    if (product.type === "SERVICE") {
+      return <Badge variant="secondary">Stok Takibi Yok</Badge>;
+    }
+
     const stock = parseFloat(product.stockQuantity);
     const minLevel = parseFloat(product.minStockLevel);
 
     if (stock <= 0) {
       return <Badge variant="destructive">Stok Yok</Badge>;
-    } else if (stock <= minLevel) {
+    } else if (stock < minLevel) {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Kritik Stok</Badge>;
+    } else if (minLevel > 0 && stock === minLevel) {
+      return <Badge className="bg-amber-500 hover:bg-amber-600">Minimum Eşik</Badge>;
     }
     return <Badge className="bg-green-500 hover:bg-green-600">Stokta</Badge>;
   };
@@ -162,69 +176,71 @@ export default function ProductStockPage() {
         title="Stok Yönetimi"
         description={product?.name || "Ürün stok hareketleri"}
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Stok Ayarla
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Stok Ayarlama</DialogTitle>
-                <DialogDescription>
-                  Ürün stoğuna giriş, çıkış veya düzeltme yapın
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>İşlem Türü</Label>
-                  <Select
-                    value={adjustment.type}
-                    onValueChange={(v) =>
-                      setAdjustment({ ...adjustment, type: v as "IN" | "OUT" | "ADJUSTMENT" })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IN">Stok Girişi (+)</SelectItem>
-                      <SelectItem value="OUT">Stok Çıkışı (-)</SelectItem>
-                      <SelectItem value="ADJUSTMENT">Stok Düzeltme</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Miktar</Label>
-                  <Input
-                    type="number"
-                    value={adjustment.quantity}
-                    onChange={(e) =>
-                      setAdjustment({ ...adjustment, quantity: e.target.value })
-                    }
-                    placeholder="Miktar girin"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Açıklama</Label>
-                  <Textarea
-                    value={adjustment.description}
-                    onChange={(e) =>
-                      setAdjustment({ ...adjustment, description: e.target.value })
-                    }
-                    placeholder="İşlem açıklaması..."
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  İptal
+          product?.type === "PRODUCT" ? (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Stok Düzenle
                 </Button>
-                <Button onClick={handleAdjustment}>Kaydet</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Stok Düzenle</DialogTitle>
+                  <DialogDescription>
+                    Ürün stoğuna giriş, çıkış veya düzeltme yapın
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>İşlem Türü</Label>
+                    <Select
+                      value={adjustment.type}
+                      onValueChange={(v) =>
+                        setAdjustment({ ...adjustment, type: v as "IN" | "OUT" | "ADJUSTMENT" })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="IN">Stok Girişi (+)</SelectItem>
+                        <SelectItem value="OUT">Stok Çıkışı (-)</SelectItem>
+                        <SelectItem value="ADJUSTMENT">Stok Düzeltme</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Miktar</Label>
+                    <Input
+                      type="number"
+                      value={adjustment.quantity}
+                      onChange={(e) =>
+                        setAdjustment({ ...adjustment, quantity: e.target.value })
+                      }
+                      placeholder="Miktar girin"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Açıklama</Label>
+                    <Textarea
+                      value={adjustment.description}
+                      onChange={(e) =>
+                        setAdjustment({ ...adjustment, description: e.target.value })
+                      }
+                      placeholder="İşlem açıklaması..."
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    İptal
+                  </Button>
+                  <Button onClick={handleAdjustment}>Kaydet</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          ) : null
         }
       />
 
@@ -234,7 +250,7 @@ export default function ProductStockPage() {
             <CardTitle className="text-base">Ürün Özeti</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Ürün Kodu</p>
                 <p className="text-lg font-semibold">{product.code}</p>
@@ -247,10 +263,16 @@ export default function ProductStockPage() {
                 <p className="text-sm text-muted-foreground">Mevcut Stok</p>
                 <div className="flex items-center gap-2">
                   <p className="text-lg font-semibold font-mono">
-                    {product.stockQuantity}
+                    {formatStockValue(product.stockQuantity)}
                   </p>
                   {getStockStatus()}
                 </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Minimum Stok</p>
+                <p className="text-lg font-semibold font-mono">
+                  {formatStockValue(product.minStockLevel)}
+                </p>
               </div>
             </div>
           </CardContent>

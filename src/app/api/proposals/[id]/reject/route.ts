@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 
 const rejectSchema = z.object({
@@ -9,14 +10,17 @@ const rejectSchema = z.object({
 // POST /api/proposals/[id]/reject - Teklifi reddet
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
     const body = await request.json();
     const validatedData = rejectSchema.parse(body);
 
     const proposal = await prisma.proposal.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!proposal) {
@@ -34,7 +38,7 @@ export async function POST(
     }
 
     const updatedProposal = await prisma.proposal.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "REJECTED",
         rejectedAt: new Date(),

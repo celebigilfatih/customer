@@ -48,8 +48,6 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
     } as PaymentCreate,
   })
 
-  const amountWatch = form.watch('amount')
-
   useEffect(() => {
     const today = new Date()
     if (!form.getValues('dueDate')) {
@@ -109,38 +107,6 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
           body: JSON.stringify(data),
         })
         if (!response.ok) throw new Error("Kaydetme başarısız")
-        const subId = form.getValues('subscriptionId') as string | undefined
-        const custId = form.getValues('customerId') as string
-        const currency = data.currency || 'TRY'
-        const currentDueDate = data.dueDate
-        let remainderDueDate = currentDueDate
-        const sub = subId ? subscriptions.find((s) => s.id === subId) : undefined
-        if (sub && currentDueDate) {
-          const base = new Date(currentDueDate)
-          if (sub.period === 'MONTHLY') {
-            base.setMonth(base.getMonth() + 1)
-          } else if (sub.period === 'YEARLY') {
-            base.setFullYear(base.getFullYear() + 1)
-          }
-          remainderDueDate = toYmd(base)
-        }
-        const debtNum = parseInt(subscriptionDebt || '0', 10)
-        const payNum = parseInt(data.amount || '0', 10)
-        const remainder = debtNum - payNum
-        if (subId && custId && remainder > 0) {
-          await fetch(`/api/payments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              customerId: custId,
-              subscriptionId: subId,
-              amount: String(remainder),
-              currency,
-              dueDate: remainderDueDate,
-              status: 'DUE',
-            }),
-          })
-        }
       }
       toast.success("Ödeme başarıyla oluşturuldu")
       onSuccess?.()
@@ -260,11 +226,6 @@ export function PaymentForm({ onSubmit, onSuccess, onCancel, embedded = false, i
                         <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">TL</span>
                       </div>
                     </FormControl>
-                    {subscriptionDebt !== '' ? (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Kalan: {Math.max(parseInt(subscriptionDebt || '0', 10) - parseInt(amountWatch || '0', 10), 0)} TL
-                      </div>
-                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

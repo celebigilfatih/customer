@@ -21,17 +21,26 @@ export async function POST(request: NextRequest) {
 
     const totalUsers = await prisma.user.count()
     if (totalUsers === 0) {
-      const hashed = await bcrypt.hash('admin', 12)
-      await prisma.user.create({
-        data: {
-          username: 'admin',
-          password: hashed,
-          fullName: 'Admin Kullanıcı',
-          email: 'admin@example.com',
-          role: Role.ADMIN,
-          isActive: true,
-        },
-      })
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          { error: 'İlk yönetici kullanıcı oluşturulmamış' },
+          { status: 503 }
+        )
+      }
+
+      if (process.env.ALLOW_DEV_AUTO_ADMIN === 'true') {
+        const hashed = await bcrypt.hash('admin', 12)
+        await prisma.user.create({
+          data: {
+            username: 'admin',
+            password: hashed,
+            fullName: 'Admin Kullanıcı',
+            email: 'admin@example.com',
+            role: Role.ADMIN,
+            isActive: true,
+          },
+        })
+      }
     }
 
     const user = await prisma.user.findUnique({ where: { username } })

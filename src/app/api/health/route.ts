@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server'
+import { existsSync, mkdirSync } from 'fs'
+import path from 'path'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
   try {
     // Check database connection
     await prisma.$queryRaw`SELECT 1`
-    
+
     // Check if uploads directory is accessible
-    const fs = require('fs')
-    const path = require('path')
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
-    
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
+
+    if (!existsSync(uploadsDir)) {
+      mkdirSync(uploadsDir, { recursive: true })
     }
 
     return NextResponse.json({
@@ -24,7 +24,7 @@ export async function GET() {
     })
   } catch (error) {
     console.error('Health check failed:', error)
-    
+
     return NextResponse.json(
       {
         status: 'unhealthy',

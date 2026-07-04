@@ -4,11 +4,12 @@ import { prisma } from "@/lib/prisma";
 // POST /api/proposals/[id]/send - Teklifi gönder
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const proposal = await prisma.proposal.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!proposal) {
@@ -26,7 +27,7 @@ export async function POST(
     }
 
     const updatedProposal = await prisma.proposal.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "SENT",
         sentAt: new Date(),

@@ -1,30 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 
 const approveSchema = z.object({
-  approvedBy: z.string().min(1, "Onaylayan kişi gereklidir"),
+  approvedBy: z.string().min(1).optional(),
+  notes: z.string().max(2000).optional(),
 });
 
-// POST /api/proposals/[id]/approve - Teklifi onayla ve cari borç oluştur
+// POST /api/proposals/[id]/approve - Teklifi onayla
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const body = await request.json();
     const validatedData = approveSchema.parse(body);
 
     // Teklifi kontrol et
     const proposal = await prisma.proposal.findUnique({
-      where: { id: params.id },
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+      where: { id },
     });
 
     if (!proposal) {
@@ -41,68 +40,19 @@ export async function POST(
       );
     }
 
-    // Transaction başlat
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Teklif durumunu güncelle
-      const updatedProposal = await tx.proposal.update({
-        where: { id: params.id },
-        data: {
-          status: "APPROVED",
-          approvedBy: validatedData.approvedBy,
-          approvedAt: new Date(),
-        },
-      });
-
-      // 2. Cari hesaba borç kaydı oluştur
-      const transaction = await tx.accountTransaction.create({
-        data: {
-          customerId: proposal.customerId,
-          type: "PROPOSAL_DEBT",
-          debit: proposal.amount,
-          credit: 0,
-          balance: proposal.amount, // Önceki bakiye + borç (sadeleştirilmiş)
-          proposalId: proposal.id,
-          description: `Teklif onayı: ${proposal.title}`,
-        },
-      });
-
-      // 3. Stoktan düşüm yap (ürün varsa)
-      for (const item of proposal.items) {
-        if (item.productId && item.product) {
-          const newStock = item.product.stockQuantity.minus(item.quantity);
-
-          // Negatif stok kontrolü
-          if (newStock.lessThan(0)) {
-            throw new Error(
-              `Yetersiz stok: ${item.product.name} (Mevcut: ${item.product.stockQuantity}, İstenen: ${item.quantity})`
-            );
-          }
-
-          // Stok hareketi oluştur
-          await tx.stockMovement.create({
-            data: {
-              productId: item.productId,
-              type: "OUT",
-              quantity: item.quantity,
-              proposalId: proposal.id,
-              description: `Teklif onayı: ${proposal.title}`,
-            },
-          });
-
-          // Ürün stoğunu güncelle
-          await tx.product.update({
-            where: { id: item.productId },
-            data: { stockQuantity: newStock },
-          });
-        }
-      }
-
-      return { proposal: updatedProposal, transaction };
+    const updatedProposal = await prisma.proposal.update({
+      where: { id },
+      data: {
+        status: "APPROVED",
+        approvedBy: validatedData.approvedBy || auth.user.id,
+        approvedAt: new Date(),
+        notes: validatedData.notes ?? proposal.notes,
+      },
     });
 
     return NextResponse.json({
-      message: "Teklif onaylandı ve cari borç oluşturuldu",
-      ...result,
+      message: "Teklif onaylandı",
+      proposal: updatedProposal,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

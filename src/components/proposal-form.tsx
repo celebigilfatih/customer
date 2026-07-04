@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { proposalCreateSchema, type ProposalCreate, type ProposalItem as ProposalItemType } from "@/lib/validations"
+import { proposalCreateSchema, type ProposalCreate } from "@/lib/validations"
 import { toast } from "sonner"
 import { getProposalTypes } from "@/lib/settings-client"
-import { Plus, Trash2, Package, User, FileText, DollarSign, Calendar } from "lucide-react"
+import { FileText, Package, Save, Trash2 } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -23,7 +23,24 @@ import {
 } from "@/components/ui/table"
 
 type SimpleCustomer = { id: string; fullName: string; club?: string }
-type Product = { id: string; name: string; description: string | null; unitPrice: string | number; group?: { name: string } | null }
+type CustomerResponse = { data?: SimpleCustomer[] }
+type Product = {
+  id: string
+  name: string
+  type: "PRODUCT" | "SERVICE"
+  description: string | null
+  unitPrice: string | number
+  group?: { name: string } | null
+}
+
+function formatCurrency(value: string | number | undefined, currency = "TRY") {
+  const amount = typeof value === "number" ? value : Number(value || 0)
+  return new Intl.NumberFormat("tr-TR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(amount) ? amount : 0)
+}
 
 interface ProposalFormProps {
   onSubmit?: (data: ProposalCreate) => Promise<void>
@@ -33,7 +50,7 @@ interface ProposalFormProps {
   initial?: Partial<ProposalCreate>
 }
 
-export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, initial }: ProposalFormProps) {
+export function ProposalForm({ onSubmit, onSuccess, onCancel, initial }: ProposalFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [customers, setCustomers] = useState<SimpleCustomer[]>([])
   const [proposalTypes, setProposalTypes] = useState<{ id: string; name: string; label: string; isActive: boolean }[]>([])
@@ -62,6 +79,14 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
     name: "items",
   })
 
+  const watchedItems = form.watch("items") || []
+  const watchedAmount = form.watch("amount")
+  const watchedCurrency = form.watch("currency") || "TRY"
+  const selectedCustomerId = form.watch("customerId")
+  const selectedType = form.watch("type")
+  const selectedCustomer = customers.find((customer) => customer.id === selectedCustomerId)
+  const selectedProposalType = proposalTypes.find((type) => type.name === selectedType)
+
   useEffect(() => {
     const loadProposalTypes = async () => {
       try {
@@ -89,14 +114,18 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
       try {
         const res = await fetch(`/api/customers?limit=100`)
         if (!res.ok) return
-        const data = await res.json()
-        const items = (data.data || []).map((c: any) => ({ id: c.id, fullName: c.fullName, club: c.club }))
+        const data = (await res.json()) as CustomerResponse
+        const items = (data.data || []).map((customer) => ({
+          id: customer.id,
+          fullName: customer.fullName,
+          club: customer.club,
+        }))
         setCustomers(items)
       } catch {}
     }
     const loadProducts = async () => {
       try {
-        const res = await fetch(`/api/products?limit=100`)
+        const res = await fetch(`/api/products?isActive=true`)
         if (!res.ok) return
         const data = await res.json()
         // API returns array directly or {data: array}
@@ -169,6 +198,14 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
     form.setValue('amount', String(Math.round(total)))
   }
 
+  const handleRemoveItem = (index: number) => {
+    const items = form.getValues('items') || []
+    const nextItems = items.filter((_, itemIndex) => itemIndex !== index)
+    remove(index)
+    const total = nextItems.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0)
+    form.setValue('amount', String(Math.round(total)))
+  }
+
   const handleSubmit = async (data: ProposalCreate) => {
     setIsLoading(true)
     try {
@@ -209,259 +246,293 @@ export function ProposalForm({ onSubmit, onSuccess, onCancel, embedded = false, 
   }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1.5fr] gap-4">
-              <FormField
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit, handleInvalid)} className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-3">
+          <Card className="gap-0 rounded-lg py-0">
+            <CardHeader className="border-b px-4 py-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <FileText className="h-4 w-4" />
+                Teklif Bilgileri
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 p-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_180px_170px]">
+                <FormField
                   control={form.control}
                   name="customerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Müşteri</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
-                      <SelectTrigger aria-required="true">
-                        <SelectValue placeholder="Müşteri seçin" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>{c.club || c.fullName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teklif Türü</FormLabel>
-                    {typesLoading ? (
-                      <div className="text-muted-foreground text-sm">Yükleniyor...</div>
-                    ) : (
-                      <Select
-                        onValueChange={(v) => field.onChange(v as 'SUBSCRIPTION' | 'PROJECT' | 'MAINTENANCE' | 'RENEWAL')}
-                        defaultValue={field.value}
-                      >
-                        <SelectTrigger aria-required="true">
-                          <SelectValue placeholder="Tür seçin" />
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Müşteri</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || undefined}>
+                        <SelectTrigger className="h-9 w-full" aria-required="true">
+                          <SelectValue placeholder="Müşteri seçin" />
                         </SelectTrigger>
                         <SelectContent>
-                          {proposalTypes.map((type) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.label}
+                          {customers.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.club || c.fullName}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    )}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Teklif Türü</FormLabel>
+                      {typesLoading ? (
+                        <div className="flex h-9 items-center rounded-md border px-3 text-sm text-muted-foreground">Yükleniyor...</div>
+                      ) : (
+                        <Select
+                          onValueChange={(v) => field.onChange(v as 'SUBSCRIPTION' | 'PROJECT' | 'MAINTENANCE' | 'RENEWAL')}
+                          defaultValue={field.value}
+                        >
+                          <SelectTrigger className="h-9 w-full" aria-required="true">
+                            <SelectValue placeholder="Tür seçin" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {proposalTypes.map((type) => (
+                              <SelectItem key={type.id} value={type.name}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="validUntil"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Geçerlilik</FormLabel>
+                      <FormControl>
+                        <Input className="h-9" type="date" required {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
                 name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Başlık</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Örn: Web Sitesi Geliştirme Teklifi" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            </div>
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Başlık</FormLabel>
+                    <FormControl>
+                      <Input className="h-9" placeholder="Örn: Web Sitesi Geliştirme Teklifi" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Açıklama</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Teklif detaylarını girin..." rows={3} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Açıklama</FormLabel>
+                      <FormControl>
+                        <Textarea className="min-h-14 resize-y" placeholder="Teklif detaylarını girin..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Products Section */}
-            <Card className="border-dashed">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-base">Teklif Kalemleri</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select onValueChange={handleAddProduct} disabled={productsLoading}>
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder={productsLoading ? "Yükleniyor..." : "Ürün ekle..."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {products.map((product) => (
-                          <SelectItem key={product.id} value={product.id}>
-                            {product.name} ({product.group?.name || "Genel"})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notlar</FormLabel>
+                      <FormControl>
+                        <Textarea className="min-h-14 resize-y" placeholder="Ek notlar..." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="gap-0 rounded-lg py-0">
+            <CardHeader className="border-b px-4 py-3">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Package className="h-4 w-4" />
+                    Teklif Kalemleri
+                  </CardTitle>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {fields.length} kalem, {formatCurrency(watchedAmount, watchedCurrency)} toplam
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {fields.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Henüz ürün eklenmemiş</p>
-                    <p className="text-sm">Yukarıdan stoktan ürün ekleyebilirsiniz</p>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="font-semibold">Ürün</TableHead>
-                          <TableHead className="font-semibold w-24">Miktar</TableHead>
-                          <TableHead className="font-semibold w-32">Birim Fiyat</TableHead>
-                          <TableHead className="font-semibold w-32">Toplam</TableHead>
-                          <TableHead className="font-semibold w-10"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {fields.map((field, index) => (
-                          <TableRow key={field.id}>
-                            <TableCell>
-                              <Input
-                                {...form.register(`items.${index}.description`)}
-                                className="h-8"
-                              />
-                            </TableCell>
-                            <TableCell>
+                <Select onValueChange={handleAddProduct} disabled={productsLoading}>
+                  <SelectTrigger className="h-9 w-full lg:w-[240px]">
+                    <SelectValue placeholder={productsLoading ? "Yükleniyor..." : "Katalog kalemi ekle"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} ({product.type === "SERVICE" ? "Hizmet" : product.group?.name || "Genel"})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              {fields.length === 0 ? (
+                <div className="flex min-h-28 flex-col items-center justify-center rounded-md border border-dashed bg-muted/20 px-4 text-center text-muted-foreground">
+                  <Package className="mb-2 h-7 w-7 opacity-60" />
+                  <p className="text-sm font-medium text-foreground">Henüz kalem eklenmedi</p>
+                  <p className="mt-1 text-sm">Sağ üstten satış kataloğu kalemi seçerek başlayın.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="min-w-[280px] font-semibold">Açıklama</TableHead>
+                        <TableHead className="w-24 font-semibold">Miktar</TableHead>
+                        <TableHead className="w-36 font-semibold">Birim Fiyat</TableHead>
+                        <TableHead className="w-36 font-semibold">Toplam</TableHead>
+                        <TableHead className="w-12" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {fields.map((field, index) => (
+                        <TableRow key={field.id}>
+                          <TableCell>
+                            <Input {...form.register(`items.${index}.description`)} className="h-8" />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min="1"
+                              className="h-8"
+                              {...form.register(`items.${index}.quantity`)}
+                              onChange={(e) => handleQuantityChange(index, e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="relative">
                               <Input
                                 type="number"
-                                min="1"
-                                className="h-8"
-                                {...form.register(`items.${index}.quantity`)}
-                                onChange={(e) => handleQuantityChange(index, e.target.value)}
+                                min="0"
+                                className="h-8 pr-8"
+                                {...form.register(`items.${index}.unitPrice`)}
+                                onChange={(e) => handleUnitPriceChange(index, e.target.value)}
                               />
-                            </TableCell>
-                            <TableCell>
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  className="h-8 pr-8"
-                                  {...form.register(`items.${index}.unitPrice`)}
-                                  onChange={(e) => handleUnitPriceChange(index, e.target.value)}
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">TL</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              <div className="relative">
-                                <Input
-                                  type="number"
-                                  className="h-8 pr-8 bg-muted"
-                                  {...form.register(`items.${index}.totalPrice`)}
-                                  readOnly
-                                />
-                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">TL</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  remove(index)
-                                  calculateTotal()
-                                }}
-                                className="h-8 w-8 text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">TL</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                className="h-8 bg-muted/50 pr-8 font-medium"
+                                {...form.register(`items.${index}.totalPrice`)}
+                                readOnly
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">TL</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveItem(index)}
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              aria-label="Kalemi sil"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <aside className="space-y-3 xl:sticky xl:top-20 xl:self-start">
+          <Card className="gap-0 rounded-lg py-0">
+            <CardHeader className="border-b px-4 py-3">
+              <CardTitle className="text-sm">Teklif Özeti</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 p-4">
+              <div className="space-y-2.5 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-muted-foreground">Müşteri</span>
+                  <span className="text-right font-medium">{selectedCustomer?.club || selectedCustomer?.fullName || "-"}</span>
+                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-muted-foreground">Tür</span>
+                  <span className="text-right font-medium">{selectedProposalType?.label || selectedType || "-"}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Kalem</span>
+                  <span className="font-medium">{watchedItems.length}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Para Birimi</span>
+                  <span className="font-medium">{watchedCurrency}</span>
+                </div>
+              </div>
+
+              <div className="rounded-md bg-muted/40 p-3">
+                <div className="text-xs font-medium uppercase text-muted-foreground">Toplam Tutar</div>
+                <div className="mt-1 text-xl font-semibold tracking-tight">{formatCurrency(watchedAmount, watchedCurrency)}</div>
+              </div>
+
               <FormField
                 control={form.control}
                 name="amount"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Toplam Tutar (TL)</FormLabel>
+                  <FormItem className="hidden">
                     <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="Örn: 15000"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          className="pr-12 bg-muted font-semibold"
-                          value={field.value || ''}
-                          readOnly
-                        />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">TL</span>
-                      </div>
+                      <Input {...field} readOnly />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="validUntil"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Geçerlilik Tarihi</FormLabel>
-                    <FormControl>
-                      <Input type="date" required {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notlar</FormLabel>
-                  <FormControl>
-                    <Textarea placeholder="Ek notlar..." rows={2} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onCancel}>İptal</Button>
-              <Button type="submit" disabled={isLoading}>{isLoading ? "Kaydediliyor..." : "Kaydet"}</Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+              <div className="flex flex-col gap-2">
+                <Button type="submit" disabled={isLoading} className="h-10 w-full">
+                  <Save className="mr-2 h-4 w-4" />
+                  {isLoading ? "Kaydediliyor..." : "Teklifi Kaydet"}
+                </Button>
+                <Button type="button" variant="outline" onClick={onCancel} className="h-10 w-full">
+                  İptal
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+      </form>
+    </Form>
   )
 }

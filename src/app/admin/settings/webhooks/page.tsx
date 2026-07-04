@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/page-header"
-import { StatusBadge } from "@/components/status-badge"
 import { Webhook, Save, Play, RefreshCw, CheckCircle2, XCircle } from "lucide-react"
 
 export default function AdminWebhookSettingsPage() {
@@ -174,7 +173,7 @@ export default function AdminWebhookSettingsPage() {
             <CardTitle>Konfigürasyon</CardTitle>
           </div>
           <CardDescription>
-            Webhook URL'leri ve güvenlik ayarları
+            Webhook URL&apos;leri ve güvenlik ayarları
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -196,7 +195,7 @@ export default function AdminWebhookSettingsPage() {
                 </Button>
                 <Button variant="outline" onClick={testDaily}>
                   <Play className="mr-2 h-4 w-4" />
-                  Günlük Cron'u Test Et
+                  Günlük Cron&apos;u Test Et
                 </Button>
               </div>
             </>

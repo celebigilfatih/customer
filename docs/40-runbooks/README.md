@@ -15,11 +15,11 @@ Add or update a runbook when a task changes:
 
 ## Current Runbook Index
 
-- `docker-compose-deployment.md`: Production Docker Compose build, migration, startup, and health verification.
+- `accounting-finance-operations.md`: Payment ledger, invoice issue, subscription schedule, auth, and recovery checks.
+- `docker-compose-deployment.md`: Production Docker Compose/Coolify build, PostgreSQL migration, admin bootstrap, upload persistence, startup, and health verification.
+- `webhook-operations.md`: Webhook delivery, logs, queue retry, timeout, and rollback checks.
 
 Known candidates:
 
-- Webhook queue and retry operations
 - Daily cron execution
 - Authentication/session troubleshooting
-- Invoice/payment reconciliation

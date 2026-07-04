@@ -35,6 +35,10 @@ export function middleware(request: NextRequest) {
   const roleIsAdmin = role === 'ADMIN' || role === 'SUPPORT'
   const roleIsCustomer = role === 'CUSTOMER'
   const roleKnown = roleIsAdmin || roleIsCustomer
+  const isProtectedFinancialApi =
+    pathname.startsWith('/api/accounting') ||
+    pathname.startsWith('/api/invoices') ||
+    pathname.startsWith('/api/payments')
 
   let rateRemaining: number | null = null
   if (pathname.startsWith('/api/')) {
@@ -56,6 +60,16 @@ export function middleware(request: NextRequest) {
   if (pathname === '/login' && isAuthenticated && roleKnown) {
     const url = roleIsCustomer ? '/portal/dashboard' : '/admin/dashboard'
     return NextResponse.redirect(new URL(url, request.url))
+  }
+
+  if (isProtectedFinancialApi) {
+    if (!isAuthenticated || !roleKnown) {
+      return NextResponse.json({ error: 'Oturum gerekli' }, { status: 401 })
+    }
+
+    if (!roleIsAdmin && !(pathname.startsWith('/api/payments') && request.method === 'GET' && roleIsCustomer)) {
+      return NextResponse.json({ error: 'Bu işlem için yetki yok' }, { status: 403 })
+    }
   }
 
   // If not authenticated, redirect any protected route to the login page

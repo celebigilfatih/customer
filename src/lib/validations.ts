@@ -77,8 +77,11 @@ export const customerFiltersSchema = z.object({
 export const userCreateSchema = z.object({
   username: z.string().min(3, 'Kullanıcı adı en az 3 karakter olmalıdır').max(50, 'Kullanıcı adı en fazla 50 karakter olmalıdır'),
   password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
-  fullName: z.string().min(2, 'Ad soyad en az 2 karakter olmalıdır').max(100, 'Ad soyad en fazla 100 karakter olmalıdır').optional(),
-  email: z.string().email('Geçerli bir e-posta adresi girin').optional(),
+  fullName: z.preprocess(
+    (value) => typeof value === 'string' && value.trim() === '' ? undefined : value,
+    z.string().trim().min(2, 'Ad soyad en az 2 karakter olmalıdır').max(100, 'Ad soyad en fazla 100 karakter olmalıdır').optional()
+  ),
+  email: z.string().trim().email('Geçerli bir e-posta adresi girin'),
   isActive: z.boolean().optional().default(true),
 })
 
@@ -112,6 +115,9 @@ const subscriptionBaseSchema = z.object({
     .refine((v) => parseInt(v, 10) > 0, 'Tutar 0\'dan büyük olmalıdır')
     .max(9, 'Tutar çok yüksek'),
   installmentCount: z.coerce.number().int().min(1).optional(),
+  yearlyPlan: z.enum(['single', 'installments']).optional(),
+  paymentAmount: z.string().regex(/^[0-9]+$/, 'Ödeme tutarı sadece sayı olmalıdır').optional(),
+  paymentDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ödeme vadesi geçerli olmalıdır').optional(),
   proposalType: z.string().optional(),
 })
 
@@ -166,6 +172,7 @@ export const taskUpdateSchema = taskCreateSchema.partial()
 
 export const paymentCreateSchema = z.object({
   customerId: z.string().min(1),
+  invoiceId: z.string().optional(),
   subscriptionId: z.string().optional(),
   amount: z.string().regex(/^[0-9]+$/),
   currency: z.string().min(1).max(10),

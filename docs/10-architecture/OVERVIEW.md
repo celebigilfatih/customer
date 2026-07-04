@@ -55,6 +55,14 @@ Every integration must document and implement:
 - Idempotent operation behavior
 - Failure visibility for operators
 
+## Read-Only Composition Surfaces
+
+Admin overview pages may use read-only composition APIs when a screen needs to display facts owned by multiple bounded contexts. These APIs must not mutate domain records or become owners of business rules.
+
+- `/api/admin/dashboard/summary` composes Customer Management, Subscription And Renewal Management, Domain And Hosting Operations, Proposals And Sales, and Accounting And Finance data for the admin dashboard.
+- Financial display values in dashboard composition must use the existing Accounting And Finance tax-excluded display approach when invoice tax detail is available.
+- Source bounded contexts remain authoritative; dashboard composition exists only to reduce duplicated client-side aggregation and UI latency.
+
 ## Change Discipline
 
 Architecture changes require:
@@ -77,4 +85,3 @@ Examples of architecture changes:
 - Module READMEs are not yet present for each bounded context.
 - Integration runbooks are not yet complete.
 - Product identity has not yet been formally selected between the project types listed in `docs/00-product/CONSTITUTION.md`.
-

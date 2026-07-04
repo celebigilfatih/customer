@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Plus, Globe } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { routes } from "@/lib/routes"
 import { DomainList } from "@/components/domain-list"
@@ -10,8 +10,9 @@ import { PageHeader } from "@/components/page-header"
 export default function AdminDomainsPage() {
   const router = useRouter()
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
+        className="gap-3"
         title="Domain Yönetimi"
         description="Domain kayıtlarını görüntüleyin ve yönetin"
         breadcrumbs={[

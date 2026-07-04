@@ -26,6 +26,15 @@ export async function GET(request: NextRequest) {
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: {
+          customer: {
+            select: {
+              id: true,
+              club: true,
+              fullName: true,
+            },
+          },
+        },
       }),
       prisma.domain.count({
         where: Object.keys(where.AND).length > 0 ? where : undefined,

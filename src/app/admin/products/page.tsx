@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -21,9 +21,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Package, Plus, Search, MoreHorizontal, Edit, Trash2, History, FolderOpen, Tag } from "lucide-react";
+import { Package, Plus, Search, MoreHorizontal, Edit, Trash2, History, FolderOpen, Tag, Wrench } from "lucide-react";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ProductGroup {
   id: string;
@@ -39,6 +39,7 @@ interface Product {
   id: string;
   code: string;
   name: string;
+  type: "PRODUCT" | "SERVICE";
   description: string | null;
   groupId: string | null;
   group: ProductGroup | null;
@@ -62,13 +63,9 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
 
-  useEffect(() => {
-    fetchProducts();
-    fetchGroups();
-  }, [search]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (search) params.append("search", search);
 
@@ -77,23 +74,28 @@ export default function ProductsPage() {
 
       const data = await response.json();
       setProducts(data);
-    } catch (error) {
+    } catch {
       toast.error("Ürünler yüklenirken hata oluştu");
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
 
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     try {
       const response = await fetch("/api/product-groups");
       if (!response.ok) throw new Error("Gruplar alınamadı");
       const data = await response.json();
       setGroups(data);
-    } catch (error) {
-      console.error("Gruplar yüklenirken hata:", error);
+    } catch {
+      console.error("Gruplar yüklenirken hata");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+    fetchGroups();
+  }, [fetchGroups, fetchProducts]);
 
   const filteredProducts = selectedGroup === "all" 
     ? products 
@@ -114,19 +116,30 @@ export default function ProductsPage() {
       const data = await response.json();
       toast.success(data.message);
       fetchProducts();
-    } catch (error) {
+    } catch {
       toast.error("Ürün silinirken hata oluştu");
     }
   };
 
+  const formatStockValue = (value: string) => {
+    const numericValue = Number(value);
+    return Number.isInteger(numericValue) ? String(numericValue) : value;
+  };
+
   const getStockStatus = (product: Product) => {
+    if (product.type === "SERVICE") {
+      return <Badge variant="secondary">Stok yok</Badge>;
+    }
+
     const stock = parseFloat(product.stockQuantity);
     const minLevel = parseFloat(product.minStockLevel);
 
     if (stock <= 0) {
       return <Badge variant="destructive">Stok Yok</Badge>;
-    } else if (stock <= minLevel) {
+    } else if (stock < minLevel) {
       return <Badge className="bg-yellow-500 hover:bg-yellow-600">Kritik Stok</Badge>;
+    } else if (minLevel > 0 && stock === minLevel) {
+      return <Badge className="bg-amber-500 hover:bg-amber-600">Minimum Eşik</Badge>;
     }
     return <Badge className="bg-green-500 hover:bg-green-600">Stokta</Badge>;
   };
@@ -134,8 +147,8 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ürünler"
-        description="Stok takibi yapılan ürün ve hizmetler"
+        title="Satış Kataloğu"
+        description="Satış kataloğu ve stok takibi"
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => router.push("/admin/products/groups")}>
@@ -144,7 +157,7 @@ export default function ProductsPage() {
             </Button>
             <Button onClick={() => router.push("/admin/products/add")}>
               <Plus className="mr-2 h-4 w-4" />
-              Yeni Ürün
+              Yeni Kayıt
             </Button>
           </div>
         }
@@ -190,8 +203,9 @@ export default function ProductsPage() {
               <TableRow>
                 <TableHead>Kod</TableHead>
                 <TableHead>Ürün Adı</TableHead>
+                <TableHead>Tip</TableHead>
                 <TableHead>Grup</TableHead>
-                <TableHead>Stok</TableHead>
+                <TableHead>Stok Durumu</TableHead>
                 <TableHead>Birim Fiyat</TableHead>
                 <TableHead>Durum</TableHead>
                 <TableHead>Kullanım</TableHead>
@@ -201,14 +215,14 @@ export default function ProductsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
+                  <TableCell colSpan={9} className="text-center">
                     Yükleniyor...
                   </TableCell>
                 </TableRow>
               ) : filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
-                    Ürün bulunamadı
+                  <TableCell colSpan={9} className="text-center">
+                    Kayıt bulunamadı
                   </TableCell>
                 </TableRow>
               ) : (
@@ -224,6 +238,19 @@ export default function ProductsPage() {
                           </div>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {product.type === "SERVICE" ? (
+                        <Badge variant="secondary">
+                          <Wrench className="mr-1 h-3 w-3" />
+                          Hizmet
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">
+                          <Package className="mr-1 h-3 w-3" />
+                          Ürün
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       {product.group ? (
@@ -242,9 +269,29 @@ export default function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span>{product.stockQuantity}</span>
-                        {getStockStatus(product)}
+                      <div className="flex flex-col items-start gap-2">
+                        {product.type === "PRODUCT" ? (
+                          <>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono">{formatStockValue(product.stockQuantity)}</span>
+                              {getStockStatus(product)}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              Min: {formatStockValue(product.minStockLevel)}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => router.push(`/admin/products/${product.id}/stock`)}
+                            >
+                              <History className="mr-1 h-3 w-3" />
+                              Stok Düzenle
+                            </Button>
+                          </>
+                        ) : (
+                          getStockStatus(product)
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -274,14 +321,16 @@ export default function ProductsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() =>
-                              router.push(`/admin/products/${product.id}/stock`)
-                            }
-                          >
-                            <History className="mr-2 h-4 w-4" />
-                            Stok Hareketleri
-                          </DropdownMenuItem>
+                          {product.type === "PRODUCT" ? (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/admin/products/${product.id}/stock`)
+                              }
+                            >
+                              <History className="mr-2 h-4 w-4" />
+                              Stok Düzenle
+                            </DropdownMenuItem>
+                          ) : null}
                           <DropdownMenuItem
                             onClick={() =>
                               router.push(`/admin/products/${product.id}/edit`)

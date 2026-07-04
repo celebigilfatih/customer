@@ -60,12 +60,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 # Copy health check script
 COPY --from=builder --chown=nextjs:nodejs /app/docker-healthcheck.js ./
 
+# Copy operational bootstrap scripts that may be run from the Coolify container terminal.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/create-admin.mjs ./scripts/create-admin.mjs
+
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Add health check. Coolify expects curl or wget in Dockerfile-based images.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

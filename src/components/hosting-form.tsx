@@ -11,7 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { hostingCreateSchema, type HostingCreate } from "@/lib/validations"
 import { toast } from "sonner"
 
-type SimpleCustomer = { id: string; fullName: string; club?: string }
+type SimpleCustomer = { id: string; fullName: string; club?: string | null }
+type CustomersResponse = { data?: SimpleCustomer[] }
 
 interface HostingFormProps {
   onSubmit?: (data: HostingCreate) => Promise<void>
@@ -39,8 +40,8 @@ export function HostingForm({ onSubmit, onSuccess, onCancel, embedded = false }:
       try {
         const res = await fetch(`/api/customers?limit=100`)
         if (!res.ok) return
-        const data = await res.json()
-        const items = (data.data || []).map((c: any) => ({ id: c.id, fullName: c.fullName, club: c.club }))
+        const data = await res.json() as CustomersResponse
+        const items = (data.data || []).map((c) => ({ id: c.id, fullName: c.fullName, club: c.club }))
         setCustomers(items)
       } catch {}
     }

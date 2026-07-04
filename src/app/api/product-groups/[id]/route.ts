@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdminApi } from "@/lib/api-auth";
 import { z } from "zod";
 
 const productGroupUpdateSchema = z.object({
@@ -13,11 +14,15 @@ const productGroupUpdateSchema = z.object({
 // GET /api/product-groups/[id] - Grup detayı
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const group = await prisma.productGroup.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         products: {
           where: { isActive: true },
@@ -51,14 +56,18 @@ export async function GET(
 // PUT /api/product-groups/[id] - Grup güncelle
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const body = await request.json();
     const validatedData = productGroupUpdateSchema.parse(body);
 
     const group = await prisma.productGroup.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -81,11 +90,15 @@ export async function PUT(
 // DELETE /api/product-groups/[id] - Grup sil (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request);
+    if (auth.response) return auth.response;
+    const { id } = await params;
+
     const group = await prisma.productGroup.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -111,7 +124,7 @@ export async function DELETE(
     }
 
     await prisma.productGroup.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ message: "Grup silindi" });

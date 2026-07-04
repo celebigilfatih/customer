@@ -32,13 +32,16 @@ const formSchema = z.object({
   description: z.string().optional(),
 });
 
+type ApplicationFormData = z.infer<typeof formSchema>;
+type AgeGroupId = ApplicationFormData["ageGroups"][number];
+
 export default function ApplicationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<ApplicationFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       teamName: "",
@@ -55,7 +58,7 @@ export default function ApplicationPage() {
     },
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: ApplicationFormData) => {
     setIsSubmitting(true);
     try {
       // Handle logo upload if file is selected
@@ -310,7 +313,7 @@ export default function ApplicationPage() {
                           control={form.control}
                           name="ageGroups"
                           render={({ field }) => {
-                            const isSelected = field.value?.includes(item.id as any);
+                            const isSelected = field.value?.includes(item.id as AgeGroupId);
                             return (
                               <div key={item.id} className="space-y-2">
                                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
@@ -440,7 +443,7 @@ export default function ApplicationPage() {
           <ul className="text-sm text-blue-800 space-y-1">
             <li>• Başvurunuz gönderildikten sonra yöneticiler tarafından incelenecektir</li>
             <li>• Başvuru durumunuz hakkında iletişim numaranızdan bilgilendirileceksiniz</li>
-            <li>• Onaylanan takımlar "Katılımcı Takımlar" sayfasında görüntülenecektir</li>
+            <li>• Onaylanan takımlar &quot;Katılımcı Takımlar&quot; sayfasında görüntülenecektir</li>
             <li>• Sorularınız için iletişim bilgilerinizi doğru girdiğinizden emin olun</li>
           </ul>
         </div>

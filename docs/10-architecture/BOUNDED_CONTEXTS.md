@@ -27,12 +27,19 @@ Observed implementation areas:
 - `src/app/api/auth/`
 - `src/app/login/`
 - `src/app/admin/login/`
+- `scripts/create-admin.mjs`
+- `docs/10-architecture/modules/identity-and-access/README.md`
 
 Non-responsibilities:
 
 - Customer billing rules
 - Subscription lifecycle rules
 - Proposal approval rules
+
+Operational requirements:
+
+- Production login must not create default credentials.
+- First production admin bootstrap must use an explicit operator-run script with environment-provided credentials.
 
 ### Customer Management
 
@@ -63,6 +70,7 @@ Owns:
 - Subscriptions
 - Billing period and subscription status
 - Renewal dates and lifecycle state
+- Admin and portal "Süreli Hizmetler" subscription records
 
 Observed implementation areas:
 
@@ -83,6 +91,7 @@ Owns:
 - Domain records
 - Hosting records
 - Renewal metadata
+- Admin and portal "Süreli Hizmetler" domain/hosting records
 
 Observed implementation areas:
 
@@ -109,19 +118,24 @@ Owns:
 - Proposal status transitions
 - Proposal approval/rejection/send/PDF flows
 - Proposal types
+- Direct sale operator workflow and sale invoice intent
 
 Observed implementation areas:
 
 - `src/app/admin/proposals/`
 - `src/app/portal/proposals/`
 - `src/app/api/proposals/`
+- `src/app/admin/sales/`
+- `src/app/api/sales/direct/`
 - `src/app/admin/settings/proposal-types/`
 - `src/components/proposal-*`
+- `src/components/direct-sale-form.tsx`
 
 Non-responsibilities:
 
 - Invoice issuance after conversion unless documented by ADR
 - Payment reconciliation
+- Supplier payable ledger ownership
 
 ### Accounting And Finance
 
@@ -147,12 +161,47 @@ Non-responsibilities:
 
 - Silent mutation of source domain records
 - Subscription lifecycle decisions without an explicit integration contract
+- Supplier payable ledger rules, which are owned by Purchasing And Suppliers
+
+### Purchasing And Suppliers
+
+Owns:
+
+- Supplier cards
+- Supplier purchases created from sale lines
+- Supplier payments
+- Supplier account transactions and supplier running balance
+- Supplier payable audit trail
+
+Observed implementation areas:
+
+- `src/app/admin/suppliers/`
+- `src/app/api/suppliers/`
+- `src/lib/supplier-ledger.ts`
+- `prisma/schema.prisma`
+  - `Supplier`
+  - `SupplierPurchase`
+  - `SupplierPayment`
+  - `SupplierAccountTransaction`
+
+Non-responsibilities:
+
+- Customer receivable balances
+- Sale invoice numbering and customer debt recognition
+- Product stock movements
+- Domain/hosting renewal lifecycle decisions
+
+Operational requirements:
+
+- Supplier ledger mutations must be server-side and transactional.
+- Supplier running balance uses purchase debt as balance-increasing and supplier payment as balance-decreasing.
+- Domain/hosting direct-sale purchases must not create stock movements.
 
 ### Products And Stock
 
 Owns:
 
-- Products
+- "Satış Kataloğu" product and service entries
 - Product groups
 - Stock movements
 
@@ -166,6 +215,7 @@ Non-responsibilities:
 
 - Customer balances
 - Proposal lifecycle unless product selection is explicitly documented as an input
+- Financial recognition of sold services
 
 ### Notifications And Webhooks
 
@@ -183,6 +233,10 @@ Observed implementation areas:
 - `src/app/api/cron/daily/`
 - `src/app/admin/settings/webhooks/`
 - `src/lib/webhook-config.ts`
+- `prisma/schema.prisma`
+  - `WebhookLog`
+  - `WebhookQueue`
+- `docs/10-architecture/modules/notifications-and-webhooks/README.md`
 
 Non-responsibilities:
 
@@ -227,4 +281,3 @@ Each context needs a module README documenting:
 - Non-responsibilities
 - Operational risks
 - Rollback notes
-

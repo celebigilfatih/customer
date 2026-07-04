@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Plus, Server } from "lucide-react"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { routes } from "@/lib/routes"
 import { HostingList } from "@/components/hosting-list"
@@ -10,8 +10,9 @@ import { PageHeader } from "@/components/page-header"
 export default function AdminHostingPage() {
   const router = useRouter()
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageHeader
+        className="gap-3"
         title="Hosting Yönetimi"
         description="Hosting paketlerini görüntüleyin ve yönetin"
         breadcrumbs={[

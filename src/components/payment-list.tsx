@@ -4,20 +4,54 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Payment } from "@/generated/prisma"
 import { type PaymentCreate } from "@/lib/validations"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { PaymentForm } from "./payment-form"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Filter, Pencil, Trash2, X } from "lucide-react"
 
-interface Props {
-  onAdd?: () => void
+type PaymentStatus = "DUE" | "LATE" | "PAID"
+
+type PaymentListItem = {
+  id: string
+  customerId: string
+  invoiceId?: string | null
+  subscriptionId?: string | null
+  amount: string | number
+  taxExcludedAmount?: string | number | null
+  currency: string
+  dueDate: string | Date | null
+  paidDate: string | Date | null
+  status: PaymentStatus
+  note: string | null
 }
 
-export function PaymentList({ onAdd }: Props) {
-  const [items, setItems] = useState<Payment[]>([])
+const ALL_FILTER_VALUE = "__all"
+
+const formatDate = (value: string | Date | null | undefined) => {
+  if (!value) return "—"
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleDateString("tr-TR")
+}
+
+const formatAmount = (value: string | number | null | undefined) => {
+  if (value === null || value === undefined || value === "") return "—"
+  return Number(value).toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+const toDateInputValue = (value: string | Date | null | undefined) => {
+  if (!value) return undefined
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString().slice(0, 10)
+}
+
+export function PaymentList() {
+  const [items, setItems] = useState<PaymentListItem[]>([])
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
   const [totalPages, setTotalPages] = useState(1)
@@ -26,7 +60,7 @@ export function PaymentList({ onAdd }: Props) {
   const [customersMap, setCustomersMap] = useState<Record<string, string>>({})
   const [subsMap, setSubsMap] = useState<Record<string, string>>({})
   const [editOpen, setEditOpen] = useState(false)
-  const [editItem, setEditItem] = useState<Payment | null>(null)
+  const [editItem, setEditItem] = useState<PaymentListItem | null>(null)
   const [filterCustomerId, setFilterCustomerId] = useState<string | undefined>(undefined)
   const [filterSubscriptionId, setFilterSubscriptionId] = useState<string | undefined>(undefined)
   const [dueFrom, setDueFrom] = useState("")
@@ -87,9 +121,8 @@ export function PaymentList({ onAdd }: Props) {
   }, [])
 
   const handleStatusChange = (v: string) => {
-    setStatus(v)
+    setStatus(v === ALL_FILTER_VALUE ? undefined : v)
     setPage(1)
-    fetchData()
   }
 
   const handleFiltersReset = () => {
@@ -100,8 +133,11 @@ export function PaymentList({ onAdd }: Props) {
     setCurrency(undefined)
     setStatus(undefined)
     setPage(1)
-    fetchData()
   }
+
+  const hasActiveFilters = Boolean(
+    filterCustomerId || filterSubscriptionId || status || dueFrom || dueTo || currency
+  )
 
   const handleDelete = async (id: string) => {
     const ok = typeof window !== 'undefined' ? window.confirm('Bu ödemeyi silmek istediğinizden emin misiniz?') : true
@@ -116,7 +152,7 @@ export function PaymentList({ onAdd }: Props) {
     }
   }
 
-  const openEdit = (item: Payment) => {
+  const openEdit = (item: PaymentListItem) => {
     setEditItem(item)
     setEditOpen(true)
   }
@@ -141,84 +177,120 @@ export function PaymentList({ onAdd }: Props) {
 
   return (
     <>
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Ödemeler</h2>
-        <Button onClick={onAdd}>Yeni Ödeme</Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtreler</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Select value={filterCustomerId} onValueChange={(v) => { setFilterCustomerId(v); setPage(1) }}>
-              <SelectTrigger>
+    <div className="space-y-3">
+      <div className="rounded-lg border bg-white">
+        <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Tahsilatlar</h2>
+            <p className="text-xs text-muted-foreground">Ödeme kayıtlarını filtreleyin ve yönetin</p>
+          </div>
+          {hasActiveFilters ? (
+            <Button variant="outline" size="sm" onClick={handleFiltersReset}>
+              <X className="mr-2 h-4 w-4" />
+              Temizle
+            </Button>
+          ) : null}
+        </div>
+        <div className="border-b bg-muted/20 px-4 py-3">
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+            <div className="flex h-9 shrink-0 items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              Filtrele
+            </div>
+            <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <Select
+              value={filterCustomerId || ALL_FILTER_VALUE}
+              onValueChange={(v) => { setFilterCustomerId(v === ALL_FILTER_VALUE ? undefined : v); setPage(1) }}
+            >
+              <SelectTrigger className="h-9 w-full bg-white sm:w-[180px]">
                 <SelectValue placeholder="Müşteri" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>Müşteri</SelectItem>
                 {Object.entries(customersMap).map(([id, name]) => (
                   <SelectItem key={id} value={id}>{name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={filterSubscriptionId} onValueChange={(v) => { setFilterSubscriptionId(v); setPage(1) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Abonelik" />
+            <Select
+              value={filterSubscriptionId || ALL_FILTER_VALUE}
+              onValueChange={(v) => { setFilterSubscriptionId(v === ALL_FILTER_VALUE ? undefined : v); setPage(1) }}
+            >
+              <SelectTrigger className="h-9 w-full bg-white sm:w-[180px]">
+                <SelectValue placeholder="Kaynak" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>Kaynak</SelectItem>
                 {Object.entries(subsMap).map(([id, name]) => (
                   <SelectItem key={id} value={id}>{name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Select value={status} onValueChange={handleStatusChange}>
-              <SelectTrigger>
+            <Select value={status || ALL_FILTER_VALUE} onValueChange={handleStatusChange}>
+              <SelectTrigger className="h-9 w-full bg-white sm:w-[140px]">
                 <SelectValue placeholder="Durum" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>Durum</SelectItem>
                 <SelectItem value="DUE">Ödenecek</SelectItem>
                 <SelectItem value="LATE">Gecikmiş</SelectItem>
                 <SelectItem value="PAID">Ödendi</SelectItem>
               </SelectContent>
             </Select>
 
-            <Input type="date" value={dueFrom} onChange={(e) => { setDueFrom(e.target.value); setPage(1) }} placeholder="Vade Başlangıç" />
-            <Input type="date" value={dueTo} onChange={(e) => { setDueTo(e.target.value); setPage(1) }} placeholder="Vade Bitiş" />
-
-            <Select value={currency} onValueChange={(v) => { setCurrency(v); setPage(1) }}>
-              <SelectTrigger>
-                <SelectValue placeholder="Para Birimi" />
+            <Select
+              value={currency || ALL_FILTER_VALUE}
+              onValueChange={(v) => { setCurrency(v === ALL_FILTER_VALUE ? undefined : v); setPage(1) }}
+            >
+              <SelectTrigger className="h-9 w-full bg-white sm:w-[120px]">
+                <SelectValue placeholder="Birim" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={ALL_FILTER_VALUE}>Birim</SelectItem>
                 <SelectItem value="TRY">TL</SelectItem>
                 <SelectItem value="USD">USD</SelectItem>
                 <SelectItem value="EUR">EUR</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="flex justify-end mt-3">
-            <Button variant="outline" size="sm" onClick={handleFiltersReset}>Filtreleri Temizle</Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="bg-white rounded-lg border overflow-hidden">
+              <div className="flex w-full flex-col overflow-hidden rounded-md border bg-white sm:w-auto sm:flex-row sm:items-center">
+                <div className="flex h-9 items-center border-b px-3 text-xs font-medium text-muted-foreground sm:border-b-0 sm:border-r">
+                  Vade
+                </div>
+                <Input
+                  className="h-9 rounded-none border-0 bg-white shadow-none focus-visible:ring-0 sm:w-[150px]"
+                  type="date"
+                  value={dueFrom}
+                  onChange={(e) => { setDueFrom(e.target.value); setPage(1) }}
+                  aria-label="Vade başlangıç"
+                />
+                <div className="hidden h-5 w-px bg-border sm:block" />
+                <Input
+                  className="h-9 rounded-none border-0 bg-white shadow-none focus-visible:ring-0 sm:w-[150px]"
+                  type="date"
+                  value={dueTo}
+                  onChange={(e) => { setDueTo(e.target.value); setPage(1) }}
+                  aria-label="Vade bitiş"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Müşteri</TableHead>
-              <TableHead>Abonelik</TableHead>
-              <TableHead>Tutar</TableHead>
-              <TableHead>Para Birimi</TableHead>
-              <TableHead>Vade</TableHead>
-              <TableHead>Ödendi</TableHead>
-              <TableHead>Durum</TableHead>
-              <TableHead>Not</TableHead>
-              <TableHead>İşlemler</TableHead>
+              <TableHead>Tahsilat Kaynağı</TableHead>
+              <TableHead>KDV Hariç Fiyat</TableHead>
+              <TableHead>KDV Dahil Tutar</TableHead>
+              <TableHead>Birim</TableHead>
+              <TableHead>Vade Tarihi</TableHead>
+              <TableHead>Ödeme Tarihi</TableHead>
+              <TableHead>Ödeme Durumu</TableHead>
+              <TableHead className="text-right">İşlem</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -226,17 +298,43 @@ export function PaymentList({ onAdd }: Props) {
               <TableRow key={p.id}>
                 <TableCell>{customersMap[p.customerId] || p.customerId}</TableCell>
                 <TableCell>{p.subscriptionId ? (subsMap[p.subscriptionId] || p.subscriptionId) : "—"}</TableCell>
-                <TableCell>{p.amount}</TableCell>
+                <TableCell>{formatAmount(p.taxExcludedAmount ?? p.amount)}</TableCell>
+                <TableCell>{formatAmount(p.amount)}</TableCell>
                 <TableCell>{p.currency === "TRY" ? "TL" : p.currency}</TableCell>
-                <TableCell>{new Date(p.dueDate).toLocaleDateString("tr-TR")}</TableCell>
-                <TableCell>{p.paidDate ? new Date(p.paidDate).toLocaleDateString("tr-TR") : "—"}</TableCell>
+                <TableCell>{formatDate(p.dueDate)}</TableCell>
+                <TableCell>{formatDate(p.paidDate)}</TableCell>
                 <TableCell>{p.status === "DUE" ? "Ödenecek" : p.status === "LATE" ? "Gecikmiş" : "Ödendi"}</TableCell>
-                <TableCell>{p.note || ""}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => openEdit(p)}>Düzenle</Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(p.id)}>Sil</Button>
-                  </div>
+                <TableCell className="text-right">
+                  <TooltipProvider delayDuration={150}>
+                    <div className="flex justify-end gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Ödemeyi düzenle"
+                            onClick={() => openEdit(p)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Düzenle</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Ödemeyi sil"
+                            onClick={() => handleDelete(p.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Sil</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </TooltipProvider>
                 </TableCell>
               </TableRow>
             ))}
@@ -251,6 +349,7 @@ export function PaymentList({ onAdd }: Props) {
           <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>Önceki</Button>
           <span className="text-sm text-gray-600">Sayfa {page} / {totalPages}</span>
           <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page >= totalPages}>Sonraki</Button>
+        </div>
         </div>
       </div>
     </div>
@@ -268,11 +367,11 @@ export function PaymentList({ onAdd }: Props) {
             initial={{
               customerId: editItem.customerId,
               subscriptionId: editItem.subscriptionId || undefined,
-              amount: editItem.amount,
+              amount: String(editItem.amount),
               currency: editItem.currency,
-              dueDate: new Date(editItem.dueDate).toISOString().slice(0,10),
-              paidDate: editItem.paidDate ? new Date(editItem.paidDate).toISOString().slice(0,10) : undefined,
-              status: editItem.status as 'DUE' | 'LATE' | 'PAID',
+              dueDate: toDateInputValue(editItem.dueDate) || "",
+              paidDate: toDateInputValue(editItem.paidDate),
+              status: editItem.status,
               note: editItem.note || undefined,
             }}
           />

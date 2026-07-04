@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Package, ArrowLeft } from "lucide-react";
+import { Package, ArrowLeft, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -23,15 +23,22 @@ interface ProductGroup {
   name: string;
 }
 
+const onDemandServiceGroups = new Set(["domain", "hosting"]);
+
+function isOnDemandServiceGroup(group?: ProductGroup) {
+  return group ? onDemandServiceGroups.has(group.name.trim().toLocaleLowerCase("tr-TR")) : false;
+}
+
 export default function AddProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<ProductGroup[]>([]);
   const [formData, setFormData] = useState({
+    type: "PRODUCT" as "PRODUCT" | "SERVICE",
     code: "",
     name: "",
     description: "",
-    groupId: "",
+    groupId: "ungrouped",
     stockQuantity: "0",
     minStockLevel: "0",
     costPrice: "",
@@ -71,6 +78,19 @@ export default function AddProductPage() {
     }
   };
 
+  const handleGroupChange = (groupId: string) => {
+    const selectedGroup = groups.find((group) => group.id === groupId);
+    const shouldUseServiceType = isOnDemandServiceGroup(selectedGroup);
+
+    setFormData({
+      ...formData,
+      groupId,
+      type: shouldUseServiceType ? "SERVICE" : formData.type,
+      stockQuantity: shouldUseServiceType ? "0" : formData.stockQuantity,
+      minStockLevel: shouldUseServiceType ? "0" : formData.minStockLevel,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -81,9 +101,9 @@ export default function AddProductPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          groupId: formData.groupId || undefined,
-          stockQuantity: parseFloat(formData.stockQuantity),
-          minStockLevel: parseFloat(formData.minStockLevel),
+          groupId: formData.groupId === "ungrouped" ? undefined : formData.groupId,
+          stockQuantity: formData.type === "SERVICE" ? 0 : parseFloat(formData.stockQuantity),
+          minStockLevel: formData.type === "SERVICE" ? 0 : parseFloat(formData.minStockLevel),
           costPrice: formData.costPrice ? parseFloat(formData.costPrice) : undefined,
           profitMargin: formData.profitMargin ? parseFloat(formData.profitMargin) : undefined,
           unitPrice: parseFloat(formData.unitPrice),
@@ -97,8 +117,8 @@ export default function AddProductPage() {
 
       toast.success("Ürün başarıyla oluşturuldu");
       router.push("/admin/products");
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ürün oluşturulamadı");
     } finally {
       setLoading(false);
     }
@@ -107,8 +127,8 @@ export default function AddProductPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Yeni Ürün"
-        description="Stok takibi yapılacak yeni ürün ekle"
+        title="Yeni Katalog Kalemi"
+        description="Satış kataloğuna yeni kayıt ekle"
         actions={
           <Button
             variant="outline"
@@ -122,33 +142,66 @@ export default function AddProductPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ürün Bilgileri</CardTitle>
+          <CardTitle>Katalog Bilgileri</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="code">Ürün Kodu *</Label>
+                <Label htmlFor="type">Kayıt Tipi *</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value: "PRODUCT" | "SERVICE") =>
+                    setFormData({
+                      ...formData,
+                      type: value,
+                      stockQuantity: value === "SERVICE" ? "0" : formData.stockQuantity,
+                      minStockLevel: value === "SERVICE" ? "0" : formData.minStockLevel,
+                    })
+                  }
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRODUCT">
+                      <span className="flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Ürün
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="SERVICE">
+                      <span className="flex items-center gap-2">
+                        <Wrench className="h-4 w-4" />
+                        Hizmet
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="code">Kod *</Label>
                 <Input
                   id="code"
                   value={formData.code}
                   onChange={(e) =>
                     setFormData({ ...formData, code: e.target.value })
                   }
-                  placeholder="ORN-001"
+                  placeholder={formData.type === "SERVICE" ? "HIZ-001" : "URN-001"}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Ürün Adı *</Label>
+                <Label htmlFor="name">Ad *</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="Örnek Ürün"
+                  placeholder={formData.type === "SERVICE" ? "Bakım Hizmeti" : "Örnek Ürün"}
                   required
                 />
               </div>
@@ -158,15 +211,13 @@ export default function AddProductPage() {
               <Label htmlFor="group">Ürün Grubu</Label>
               <Select
                 value={formData.groupId}
-                onValueChange={(value: string) =>
-                  setFormData({ ...formData, groupId: value })
-                }
+                onValueChange={handleGroupChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Grup seçin (opsiyonel)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">Gruplansız</SelectItem>
+                  <SelectItem value="ungrouped">Gruplansız</SelectItem>
                   {groups.map((group) => (
                     <SelectItem key={group.id} value={group.id}>
                       {group.name}
@@ -189,35 +240,37 @@ export default function AddProductPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="stockQuantity">Açılış Stoğu</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.stockQuantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, stockQuantity: e.target.value })
-                  }
-                />
-              </div>
+            {formData.type === "PRODUCT" ? (
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="stockQuantity">Açılış Stoğu</Label>
+                  <Input
+                    id="stockQuantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.stockQuantity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, stockQuantity: e.target.value })
+                    }
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="minStockLevel">Min. Stok Seviyesi</Label>
-                <Input
-                  id="minStockLevel"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.minStockLevel}
-                  onChange={(e) =>
-                    setFormData({ ...formData, minStockLevel: e.target.value })
-                  }
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="minStockLevel">Min. Stok Seviyesi</Label>
+                  <Input
+                    id="minStockLevel"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.minStockLevel}
+                    onChange={(e) =>
+                      setFormData({ ...formData, minStockLevel: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-            </div>
+            ) : null}
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">

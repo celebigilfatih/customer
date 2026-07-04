@@ -11,7 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { domainCreateSchema, type DomainCreate } from "@/lib/validations"
 import { toast } from "sonner"
 
-type SimpleCustomer = { id: string; fullName: string; firmaAdi?: string; club?: string }
+type SimpleCustomer = { id: string; fullName: string; firmaAdi?: string | null; club?: string | null }
+type CustomersResponse = { data?: SimpleCustomer[] }
 
 interface DomainFormProps {
   onSubmit?: (data: DomainCreate) => Promise<void>
@@ -41,8 +42,8 @@ export function DomainForm({ onSubmit, onSuccess, onCancel, embedded = false }: 
       try {
         const res = await fetch(`/api/customers?limit=100`)
         if (!res.ok) return
-        const data = await res.json()
-        const items = (data.data || []).map((c: any) => ({ id: c.id, fullName: c.fullName, firmaAdi: c.firmaAdi, club: c.club }))
+        const data = await res.json() as CustomersResponse
+        const items = (data.data || []).map((c) => ({ id: c.id, fullName: c.fullName, firmaAdi: c.firmaAdi, club: c.club }))
         setCustomers(items)
       } catch {}
     }

@@ -12,7 +12,6 @@ export type ProposalTypeSetting = {
 export async function getAllProposalTypes(): Promise<ProposalTypeSetting[]> {
   try {
     console.log('Getting ALL proposal types from database (including inactive)...')
-    // @ts-ignore
     const setting = await prisma.setting.findUnique({
       where: { key: PROPOSAL_TYPES_KEY },
     })
@@ -35,7 +34,6 @@ export async function getAllProposalTypes(): Promise<ProposalTypeSetting[]> {
 export async function getProposalTypes(): Promise<ProposalTypeSetting[]> {
   try {
     console.log('Getting proposal types from database...')
-    // @ts-ignore
     const setting = await prisma.setting.findUnique({
       where: { key: PROPOSAL_TYPES_KEY },
     })
@@ -65,19 +63,16 @@ export async function getProposalTypes(): Promise<ProposalTypeSetting[]> {
 
 export async function saveProposalTypes(types: ProposalTypeSetting[]): Promise<boolean> {
   try {
-    // @ts-ignore
     const existing = await prisma.setting.findUnique({
       where: { key: PROPOSAL_TYPES_KEY },
     })
 
     if (existing) {
-      // @ts-ignore
       await prisma.setting.update({
         where: { key: PROPOSAL_TYPES_KEY },
         data: { value: JSON.stringify(types) },
       })
     } else {
-      // @ts-ignore
       await prisma.setting.create({
         data: {
           key: PROPOSAL_TYPES_KEY,
