@@ -26,6 +26,8 @@ type PaymentListItem = {
   paidDate: string | Date | null
   status: PaymentStatus
   note: string | null
+  sourceLabel?: string | null
+  sourceReference?: string | null
 }
 
 const ALL_FILTER_VALUE = "__all"
@@ -297,7 +299,16 @@ export function PaymentList() {
             {items.map((p) => (
               <TableRow key={p.id}>
                 <TableCell>{customersMap[p.customerId] || p.customerId}</TableCell>
-                <TableCell>{p.subscriptionId ? (subsMap[p.subscriptionId] || p.subscriptionId) : "—"}</TableCell>
+                <TableCell>
+                  <div className="max-w-[280px]">
+                    <div className="truncate font-medium">
+                      {p.sourceLabel || (p.subscriptionId ? (subsMap[p.subscriptionId] || p.subscriptionId) : "—")}
+                    </div>
+                    {p.sourceReference ? (
+                      <div className="text-xs text-muted-foreground">{p.sourceReference}</div>
+                    ) : null}
+                  </div>
+                </TableCell>
                 <TableCell>{formatAmount(p.taxExcludedAmount ?? p.amount)}</TableCell>
                 <TableCell>{formatAmount(p.amount)}</TableCell>
                 <TableCell>{p.currency === "TRY" ? "TL" : p.currency}</TableCell>

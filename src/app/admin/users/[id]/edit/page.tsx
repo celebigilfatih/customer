@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -22,14 +29,24 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { routes } from "@/lib/routes";
 import { toast } from "sonner";
-import { Save, User, Mail, Lock, UserCircle } from "lucide-react";
+import { Save, User, Mail, Lock, UserCircle, Shield } from "lucide-react";
 
 const userSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalı"),
   fullName: z.string().optional(),
   email: z.string().email("Geçerli bir e-posta adresi girin"),
   password: z.string().min(6, "Şifre en az 6 karakter olmalı").optional().or(z.literal("")),
+  role: z.enum(["ADMIN", "SUPPORT", "CUSTOMER"]),
+  customerId: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  if (data.role === "CUSTOMER" && !data.customerId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["customerId"],
+      message: "Müşteri portal kullanıcısı için müşteri seçin",
+    });
+  }
 });
 
 type UserFormInput = z.input<typeof userSchema>;
@@ -40,7 +57,19 @@ interface User {
   username: string;
   fullName: string;
   email: string;
+  role: "ADMIN" | "SUPPORT" | "CUSTOMER";
+  customerId: string | null;
   isActive: boolean;
+}
+
+interface CustomerOption {
+  id: string;
+  fullName: string;
+  club?: string | null;
+}
+
+function customerLabel(customer: CustomerOption) {
+  return customer.club ? `${customer.club} - ${customer.fullName}` : customer.fullName;
 }
 
 export default function AdminUserEditPage() {
@@ -49,6 +78,7 @@ export default function AdminUserEditPage() {
   const userId = params.id as string;
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   const form = useForm<UserFormInput, unknown, UserFormData>({
@@ -58,26 +88,29 @@ export default function AdminUserEditPage() {
       fullName: "",
       email: "",
       password: "",
+      role: "SUPPORT",
+      customerId: null,
       isActive: true,
     },
   });
 
+  const selectedRole = form.watch("role");
+
   const fetchUser = useCallback(async () => {
     try {
-      const response = await fetch("/api/users");
-      if (!response.ok) throw new Error("Kullanıcılar yüklenemedi");
-      const users = await response.json();
-      const foundUser = users.find((u: User) => u.id === userId);
-      if (foundUser) {
-        setUser(foundUser);
-        form.reset({
-          username: foundUser.username,
-          fullName: foundUser.fullName || "",
-          email: foundUser.email,
-          password: "",
-          isActive: foundUser.isActive,
-        });
-      }
+      const response = await fetch(`/api/users/${userId}`);
+      if (!response.ok) throw new Error("Kullanıcı yüklenemedi");
+      const foundUser = await response.json() as User;
+      setUser(foundUser);
+      form.reset({
+        username: foundUser.username,
+        fullName: foundUser.fullName || "",
+        email: foundUser.email,
+        password: "",
+        role: foundUser.role,
+        customerId: foundUser.customerId,
+        isActive: foundUser.isActive,
+      });
     } catch {
       toast.error("Kullanıcı bilgileri yüklenemedi");
     } finally {
@@ -89,10 +122,34 @@ export default function AdminUserEditPage() {
     fetchUser();
   }, [fetchUser]);
 
+  useEffect(() => {
+    async function fetchCustomers() {
+      try {
+        const response = await fetch("/api/customers?limit=100");
+        if (!response.ok) throw new Error("Müşteriler yüklenemedi");
+        const payload = await response.json();
+        setCustomers(payload.data || []);
+      } catch {
+        toast.error("Müşteri listesi yüklenemedi");
+      }
+    }
+
+    fetchCustomers();
+  }, []);
+
+  useEffect(() => {
+    if (selectedRole !== "CUSTOMER") {
+      form.setValue("customerId", null);
+    }
+  }, [form, selectedRole]);
+
   const onSubmit = async (data: UserFormData) => {
     setIsLoading(true);
     try {
-      const payload: Partial<UserFormData> = { ...data };
+      const payload: Partial<UserFormData> = {
+        ...data,
+        customerId: data.role === "CUSTOMER" ? data.customerId : null,
+      };
       if (!payload.password) {
         delete payload.password;
       }
@@ -107,7 +164,7 @@ export default function AdminUserEditPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Kullanıcı güncellenemedi");
+        throw new Error(error.error || error.message || "Kullanıcı güncellenemedi");
       }
 
       toast.success("Kullanıcı başarıyla güncellendi");
@@ -242,6 +299,66 @@ export default function AdminUserEditPage() {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  <span>Erişim Yetkisi</span>
+                </div>
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rol</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Rol seçin" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="SUPPORT">Destek / Operatör</SelectItem>
+                            <SelectItem value="ADMIN">Yönetici</SelectItem>
+                            <SelectItem value="CUSTOMER">Müşteri Portalı</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {selectedRole === "CUSTOMER" && (
+                    <FormField
+                      control={form.control}
+                      name="customerId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bağlı Müşteri</FormLabel>
+                          <Select value={field.value || undefined} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Müşteri seçin" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {customers.map((customer) => (
+                                <SelectItem key={customer.id} value={customer.id}>
+                                  {customerLabel(customer)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Security */}

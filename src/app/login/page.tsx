@@ -88,6 +88,7 @@ export default function LoginPage() {
                   <Input
                     id="username"
                     type="text"
+                    autoComplete="username"
                     placeholder="Kullanıcı adınızı girin"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
@@ -104,6 +105,7 @@ export default function LoginPage() {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="Şifrenizi girin"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

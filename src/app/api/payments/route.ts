@@ -57,6 +57,43 @@ const calculateTaxPaymentAmount = (payment: {
   } | null
 }) => payment.amount.minus(calculateTaxExcludedPaymentAmount(payment))
 
+type PaymentListSource = {
+  note?: string | null
+  description?: string | null
+  subscription?: {
+    name: string | null
+  } | null
+  invoice?: {
+    number: string
+    items?: Array<{
+      description: string
+      domain?: { name: string } | null
+      hosting?: { name: string } | null
+      product?: { name: string; type: string } | null
+    }>
+  } | null
+}
+
+function buildPaymentSourceLabel(payment: PaymentListSource) {
+  const invoiceItemLabels =
+    payment.invoice?.items
+      ?.map((item) => {
+        if (item.domain) return `Domain: ${item.domain.name}`
+        if (item.hosting) return `Hosting: ${item.hosting.name}`
+        if (item.product?.type === 'SERVICE') return `Hizmet: ${item.product.name}`
+        if (item.product?.type === 'PRODUCT') return `Ürün: ${item.product.name}`
+        return item.description ? `Kalem: ${item.description}` : null
+      })
+      .filter((label): label is string => Boolean(label)) || []
+
+  if (invoiceItemLabels.length > 0) {
+    return Array.from(new Set(invoiceItemLabels)).join(', ')
+  }
+
+  if (payment.subscription?.name) return `Abonelik: ${payment.subscription.name}`
+  return payment.description || payment.note || null
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuthenticatedApi(request)
@@ -170,9 +207,36 @@ export async function GET(request: NextRequest) {
         include: {
           invoice: {
             select: {
+              number: true,
               subtotal: true,
               total: true,
               taxAmount: true,
+              items: {
+                select: {
+                  description: true,
+                  domain: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                  hosting: {
+                    select: {
+                      name: true,
+                    },
+                  },
+                  product: {
+                    select: {
+                      name: true,
+                      type: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          subscription: {
+            select: {
+              name: true,
             },
           },
         },
@@ -185,6 +249,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       data: items.map((payment) => ({
         ...payment,
+        sourceLabel: buildPaymentSourceLabel(payment),
+        sourceReference: payment.invoice?.number || null,
         taxExcludedAmount: calculateTaxExcludedPaymentAmount(payment).toString(),
         taxAmount: payment.invoice?.taxAmount.toString() || null,
       })),

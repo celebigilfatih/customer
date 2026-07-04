@@ -28,7 +28,6 @@ import {
   Trash2,
   Mail,
   Calendar,
-  MoreHorizontal,
   Shield,
 } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
@@ -38,10 +37,23 @@ interface User {
   username: string;
   fullName: string | null;
   email: string;
+  role: "ADMIN" | "SUPPORT" | "CUSTOMER" | string;
+  customer?: {
+    id: string;
+    club: string | null;
+    fullName: string;
+  } | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+const roleLabels: Record<string, string> = {
+  ADMIN: "Yönetici",
+  SUPPORT: "Operatör",
+  CUSTOMER: "Müşteri",
+  USER: "Eski Rol",
+};
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -242,6 +254,12 @@ export default function AdminUsersPage() {
                         E-posta
                       </div>
                     </TableHead>
+                    <TableHead className="font-semibold">
+                      <div className="flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-muted-foreground" />
+                        Rol
+                      </div>
+                    </TableHead>
                     <TableHead className="font-semibold">Durum</TableHead>
                     <TableHead className="font-semibold">
                       <div className="flex items-center gap-2">
@@ -269,6 +287,18 @@ export default function AdminUsersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <Badge variant={user.role === "USER" ? "destructive" : "secondary"}>
+                            {roleLabels[user.role] || user.role}
+                          </Badge>
+                          {user.role === "CUSTOMER" && user.customer && (
+                            <p className="text-xs text-muted-foreground">
+                              {user.customer.club || user.customer.fullName}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={user.isActive ? "default" : "secondary"}

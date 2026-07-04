@@ -1,27 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@/generated/prisma'
 import { userUpdateSchema, UserUpdate } from '@/lib/validations'
+import { requireAdminApi } from '@/lib/api-auth'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
+
+function userSelect() {
+  return {
+    id: true,
+    username: true,
+    fullName: true,
+    email: true,
+    role: true,
+    customerId: true,
+    isActive: true,
+    createdAt: true,
+    updatedAt: true,
+    customer: {
+      select: {
+        id: true,
+        club: true,
+        fullName: true,
+      },
+    },
+  } as const
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request)
+    if (auth.response) return auth.response
+
     const { id } = await params
     const user = await prisma.user.findUnique({
       where: { id },
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        email: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userSelect(),
     })
 
     if (!user) {
@@ -46,6 +63,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request)
+    if (auth.response) return auth.response
+
     const body = await request.json()
     
     // Validate input
@@ -57,7 +77,7 @@ export async function PUT(
       )
     }
 
-    const { username, password, fullName, email, isActive } = validation.data
+    const { username, password, fullName, email, role, customerId, isActive } = validation.data
     const { id } = await params
 
     // Check if user exists
@@ -89,11 +109,58 @@ export async function PUT(
       }
     }
 
+    if (email && email !== existingUser.email) {
+      const emailExists = await prisma.user.findFirst({
+        where: {
+          email,
+          NOT: { id },
+        },
+      })
+
+      if (emailExists) {
+        return NextResponse.json(
+          { error: 'Bu e-posta adresi zaten kullanılıyor' },
+          { status: 409 }
+        )
+      }
+    }
+
+    const targetRole = role || existingUser.role
+    const targetCustomerId = targetRole === 'CUSTOMER'
+      ? (customerId === undefined ? existingUser.customerId : customerId)
+      : null
+
+    if (targetRole === 'CUSTOMER' && !targetCustomerId) {
+      return NextResponse.json(
+        { error: 'Müşteri portal kullanıcısı için müşteri bağlantısı zorunludur' },
+        { status: 400 }
+      )
+    }
+
+    if (targetCustomerId) {
+      const customer = await prisma.customer.findUnique({
+        where: { id: targetCustomerId },
+        select: { id: true },
+      })
+
+      if (!customer) {
+        return NextResponse.json(
+          { error: 'Bağlanacak müşteri bulunamadı' },
+          { status: 404 }
+        )
+      }
+    }
+
     // Prepare update data
-    const updateData: Partial<UserUpdate> = {
+    const updateData: Partial<UserUpdate> & { customerId?: string | null } = {
       fullName,
       email,
+      role,
       isActive,
+    }
+
+    if (role !== undefined || customerId !== undefined) {
+      updateData.customerId = targetCustomerId
     }
 
     if (username) {
@@ -108,15 +175,7 @@ export async function PUT(
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: {
-        id: true,
-        username: true,
-        fullName: true,
-        email: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: userSelect(),
     })
 
     return NextResponse.json(user)
@@ -134,6 +193,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireAdminApi(request)
+    if (auth.response) return auth.response
+
     const { id } = await params
     
     // Check if user exists

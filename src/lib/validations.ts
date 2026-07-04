@@ -74,6 +74,8 @@ export const customerFiltersSchema = z.object({
 })
 
 // User validation schemas
+export const userRoleSchema = z.enum(['ADMIN', 'SUPPORT', 'CUSTOMER'])
+
 export const userCreateSchema = z.object({
   username: z.string().min(3, 'Kullanıcı adı en az 3 karakter olmalıdır').max(50, 'Kullanıcı adı en fazla 50 karakter olmalıdır'),
   password: z.string().min(6, 'Şifre en az 6 karakter olmalıdır'),
@@ -82,6 +84,8 @@ export const userCreateSchema = z.object({
     z.string().trim().min(2, 'Ad soyad en az 2 karakter olmalıdır').max(100, 'Ad soyad en fazla 100 karakter olmalıdır').optional()
   ),
   email: z.string().trim().email('Geçerli bir e-posta adresi girin'),
+  role: userRoleSchema.default('SUPPORT'),
+  customerId: z.string().optional().nullable(),
   isActive: z.boolean().optional().default(true),
 })
 

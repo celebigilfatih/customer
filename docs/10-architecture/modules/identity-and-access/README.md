@@ -56,3 +56,15 @@ and `NODE_ENV` is not `production`.
 
 - If login fails after deployment because no admin exists, run the bootstrap script instead of re-enabling default credentials.
 - If a bootstrap command was run with the wrong email or username before any business data exists, correct it through the admin/user management workflow or a deliberate database correction with an audit note.
+
+## User Management Contract
+
+Admin-created application users must use an explicit interactive role:
+
+- `ADMIN`: full admin/operator access.
+- `SUPPORT`: admin/operator access for day-to-day operations.
+- `CUSTOMER`: customer portal access only.
+
+The legacy `USER` value is not a valid interactive role for new users. A `CUSTOMER` user must be linked to a `Customer` record through `user.customerId`; otherwise the portal cannot enforce customer-owned reads.
+
+`/api/users` and `/api/users/[id]` are admin-only user-management endpoints. They must not be used for public registration or customer self-service.

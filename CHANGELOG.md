@@ -2,6 +2,14 @@
 
 All notable repository changes should be documented here.
 
+## 2026-07-04
+
+### Fixed
+
+- Fixed admin user creation so new users receive an explicit `ADMIN`, `SUPPORT`, or `CUSTOMER` role instead of the legacy non-interactive `USER` default.
+- Added customer linkage handling for `CUSTOMER` portal users and protected user-management APIs behind admin/support authentication.
+- Fixed the `/admin/finance` payment source column so invoice-linked direct-sale collections show the sold domain, hosting, product, service, or free-form invoice item instead of an empty source.
+
 ## 2026-07-03
 
 ### Documented

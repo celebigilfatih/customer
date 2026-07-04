@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,13 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormControl,
   FormField,
@@ -21,22 +28,43 @@ import {
 } from "@/components/ui/form";
 import { routes } from "@/lib/routes";
 import { toast } from "sonner";
-import { Plus, User, Mail, Lock, UserCircle } from "lucide-react";
+import { Plus, User, Mail, Lock, UserCircle, Shield } from "lucide-react";
 
 const userSchema = z.object({
   username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalı"),
   fullName: z.string().optional(),
   email: z.string().email("Geçerli bir e-posta adresi girin"),
   password: z.string().min(6, "Şifre en az 6 karakter olmalı"),
+  role: z.enum(["ADMIN", "SUPPORT", "CUSTOMER"]),
+  customerId: z.string().optional(),
   isActive: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  if (data.role === "CUSTOMER" && !data.customerId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["customerId"],
+      message: "Müşteri portal kullanıcısı için müşteri seçin",
+    });
+  }
 });
 
 type UserFormInput = z.input<typeof userSchema>;
 type UserFormData = z.output<typeof userSchema>;
 
+interface CustomerOption {
+  id: string;
+  fullName: string;
+  club?: string | null;
+}
+
+function customerLabel(customer: CustomerOption) {
+  return customer.club ? `${customer.club} - ${customer.fullName}` : customer.fullName;
+}
+
 export default function AdminUserAddPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
 
   const form = useForm<UserFormInput, unknown, UserFormData>({
     resolver: zodResolver(userSchema),
@@ -45,24 +73,54 @@ export default function AdminUserAddPage() {
       fullName: "",
       email: "",
       password: "",
+      role: "SUPPORT",
+      customerId: undefined,
       isActive: true,
     },
   });
 
+  const selectedRole = form.watch("role");
+
+  useEffect(() => {
+    async function fetchCustomers() {
+      try {
+        const response = await fetch("/api/customers?limit=100");
+        if (!response.ok) throw new Error("Müşteriler yüklenemedi");
+        const payload = await response.json();
+        setCustomers(payload.data || []);
+      } catch {
+        toast.error("Müşteri listesi yüklenemedi");
+      }
+    }
+
+    fetchCustomers();
+  }, []);
+
+  useEffect(() => {
+    if (selectedRole !== "CUSTOMER") {
+      form.setValue("customerId", undefined);
+    }
+  }, [form, selectedRole]);
+
   const onSubmit = async (data: UserFormData) => {
     setIsLoading(true);
     try {
+      const payload = {
+        ...data,
+        customerId: data.role === "CUSTOMER" ? data.customerId : null,
+      };
+
       const response = await fetch("/api/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || "Kullanıcı oluşturulamadı");
+        throw new Error(error.error || error.message || "Kullanıcı oluşturulamadı");
       }
 
       toast.success("Kullanıcı başarıyla oluşturuldu");
@@ -163,6 +221,66 @@ export default function AdminUserAddPage() {
                 />
               </div>
 
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Shield className="h-4 w-4" />
+                  <span>Erişim Yetkisi</span>
+                </div>
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Rol</FormLabel>
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Rol seçin" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="SUPPORT">Destek / Operatör</SelectItem>
+                            <SelectItem value="ADMIN">Yönetici</SelectItem>
+                            <SelectItem value="CUSTOMER">Müşteri Portalı</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {selectedRole === "CUSTOMER" && (
+                    <FormField
+                      control={form.control}
+                      name="customerId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Bağlı Müşteri</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Müşteri seçin" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {customers.map((customer) => (
+                                <SelectItem key={customer.id} value={customer.id}>
+                                  {customerLabel(customer)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </div>
+
               {/* Security */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -199,7 +317,7 @@ export default function AdminUserAddPage() {
                       <div className="space-y-1 leading-none">
                         <FormLabel>Aktif Kullanıcı</FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Kullanıcı hemen giriş yapabilir
+                          Kullanıcı rolü ve müşteri bağlantısı uygunsa giriş yapabilir
                         </p>
                       </div>
                     </FormItem>

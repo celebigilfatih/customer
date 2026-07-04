@@ -35,6 +35,7 @@ The standalone accounting customer list is not a primary navigation surface. Leg
 
 - `/api/payments`
   - `GET`: authenticated access. `ADMIN` and `SUPPORT` may read all payments. `CUSTOMER` may read only its own customer payments.
+  - Payment list rows return a display-only `sourceLabel` derived from the linked invoice items first, then subscription name, then payment description/note. This lets the finance screen show what was sold without moving sales/catalog ownership into the payment UI.
   - `GET` with `summary=true`: returns real tax-excluded payment summary buckets for collected, open, due, late, and current-month collected payments within the authenticated user's allowed payment scope. It also returns collected payment tax totals for the finance summary cards. Invoice-linked payments use the invoice `subtotal / total` ratio; payments without invoice tax detail are returned at their recorded amount and have zero derived tax.
   - `POST`, `PUT`, `DELETE`: `ADMIN` or `SUPPORT` only.
   - A payment with status `PAID` creates or updates one `PAYMENT_CREDIT` account transaction.

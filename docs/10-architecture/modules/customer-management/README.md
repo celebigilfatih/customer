@@ -48,6 +48,8 @@ Accounting And Finance remains the owner of the backing API and ledger behavior.
 
 Customer portal features that need customer-owned profile reads must use the detail endpoint and must keep the `customerId` ownership check intact.
 
+Customer portal users are created by Identity And Access with role `CUSTOMER` and must be linked to the matching customer through `user.customerId`. Customer Management owns the customer record; Identity And Access owns the user role and session.
+
 ## Dependencies
 
 - `src/lib/api-auth.ts` for session, role, and customer ownership checks.
