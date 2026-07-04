@@ -28,6 +28,7 @@ All notable repository changes should be documented here.
 
 ### Changed
 
+- Documented the local-to-Coolify database restore procedure, production backup requirement, post-restore admin verification, and ignored local DB backup artifacts.
 - Added explicit validation scripts for Prisma schema validation, TypeScript type checking, and aggregate validation.
 - Added customer summary links to the admin domain list so operators can see the related company/contact from `/admin/domains`.
 - Refined `/admin/domains` with a compact filter toolbar and activated domain search, customer filtering, page-size selection, and pagination controls.

@@ -116,6 +116,47 @@ Requirements:
 - The script must not be used to reset a production password silently.
 - Store the real production password in a password manager; do not commit it or write it into this repository.
 
+### Local Database Restore To Coolify
+
+Use this flow when intentionally replacing the Coolify production database with a local database snapshot.
+
+Required safeguards:
+
+- Stop the application container before restoring the database.
+- Create a separate production backup database first.
+- Restore only into the application database, such as `customer_webmahsul`.
+- Confirm the application is deployed and healthy after restore.
+- Recreate or verify the intended production admin account because the restored local `users` table replaces production users.
+
+Example backup command from the Coolify PostgreSQL terminal:
+
+```sh
+createdb -U postgres customer_webmahsul_backup_YYYYMMDD_HHMMSS
+pg_dump -U postgres -d customer_webmahsul --clean --if-exists --no-owner --no-privileges \
+  | psql -U postgres -d customer_webmahsul_backup_YYYYMMDD_HHMMSS
+```
+
+Recommended restore path:
+
+1. Export the local database with `pg_dump --format=custom`.
+2. Open the Coolify PostgreSQL resource `Import Backup` page.
+3. Set the custom import command to target the application database explicitly:
+
+   ```sh
+   pg_restore -U $POSTGRES_USER --clean --if-exists --no-owner --no-privileges -d customer_webmahsul
+   ```
+
+4. Upload the custom-format dump file and confirm the destructive restore.
+5. Verify core row counts from the Coolify database terminal.
+6. Recreate or verify the production admin account.
+7. Deploy or restart the application and confirm `/api/health` reports `database: connected` and `uploads: accessible`.
+
+For the 2026-07-04 restore, the pre-restore production backup database was:
+
+```text
+customer_webmahsul_backup_20260704_113338
+```
+
 ## Verification
 
 ```sh
@@ -238,4 +279,5 @@ For Hostinger/Coolify deployments using an existing PostgreSQL resource:
 - Roll back the application image through Coolify if the container fails after deployment.
 - Do not point a rollback at another application's database.
 - Preserve the separate `customer_webmahsul` database for incident analysis unless an explicit database restore is planned.
+- If a local-to-production restore must be reverted, restore from the pre-restore backup database using the same `pg_restore`/`psql` discipline and document the corrective action.
 - Upload storage is independent of image rollback and should not be deleted during ordinary rollback.
